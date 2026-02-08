@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="container">
+    <header class="site-header">
+      <h1><span>WebRTC</span> Docs</h1>
+      <p>Deepdive into WebRTC</p>
+    </header>
+
+    <!-- Architecture & Components -->
+    <section class="docs-section">
+      <h2 class="section-title">Architecture &amp; Components</h2>
+      <div class="card-grid">
+        <a class="card" href="docs/webrtc-components.html">
+          <div class="card-icon">🏗️</div>
+          <div class="card-title">WebRTC Components</div>
+          <div class="card-desc">
+            Full architecture overview &mdash; ICE, DTLS, Transport, NetEQ, Decoder, PLC, and how they connect.
+          </div>
+        </a>
+
+        <a class="card" href="docs/pcm-and-audio-encoding.html">
+          <div class="card-icon">🎵</div>
+          <div class="card-title">PCM &amp; Audio Encoding</div>
+          <div class="card-desc">
+            What is PCM? How do Opus, PCMU codecs work? What AudioContext and Audio element read.
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Connection & ICE -->
+    <section class="docs-section">
+      <h2 class="section-title">Connection &amp; ICE</h2>
+      <div class="card-grid">
+        <a class="card" href="docs/webrtc-establishment.html">
+          <div class="card-icon">🤝</div>
+          <div class="card-title">WebRTC Establishment &amp; ICE</div>
+          <div class="card-desc">
+            Offer/Answer, setLocalDescription, ICE candidates, STUN checks, DTLS handshake &mdash; from start to media flow.
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Audio Pipelines -->
+    <section class="docs-section">
+      <h2 class="section-title">Audio Pipelines</h2>
+      <div class="card-grid">
+        <a class="card" href="docs/audio-send-pipeline.html">
+          <div class="card-icon">📤</div>
+          <div class="card-title">Audio Send Pipeline</div>
+          <div class="card-desc">
+            Microphone → Audio Processing → Encoder → Pacer → Network. AEC, NS, AGC explained.
+          </div>
+        </a>
+
+        <a class="card" href="docs/audio-receive-pipeline.html">
+          <div class="card-icon">📥</div>
+          <div class="card-title">Audio Receive Pipeline</div>
+          <div class="card-desc">
+            Packets → Jitter Buffer → Decoder → PLC → Speaker. How inbound audio flows and what PCM means.
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Jitter & Buffering -->
+    <section class="docs-section">
+      <h2 class="section-title">Jitter &amp; Buffering</h2>
+      <div class="card-grid">
+        <a class="card" href="docs/jitter-buffer.html">
+          <div class="card-icon">📦</div>
+          <div class="card-title">Jitter Buffer</div>
+          <div class="card-desc">
+            Buffer delay, target delay, emitted count, minimum delay &mdash; how the jitter buffer absorbs network variance.
+          </div>
+        </a>
+
+        <a class="card" href="docs/jitter-calculation.html">
+          <div class="card-icon">📐</div>
+          <div class="card-title">Jitter Calculation</div>
+          <div class="card-desc">
+            How WebRTC calculates jitter using RFC 3550 formula. Step-by-step breakdown with examples.
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Metrics & Monitoring -->
+    <section class="docs-section">
+      <h2 class="section-title">Metrics &amp; Monitoring</h2>
+      <div class="card-grid">
+        <a class="card" href="docs/monitoring-audio-stats.html">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Monitoring Audio Stats</div>
+          <div class="card-desc">
+            RTT, jitter, bitrate, packet loss, concealment &mdash; delta-based metrics for real-time monitoring.
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Tools -->
+    <section class="docs-section">
+      <h2 class="section-title">Tools</h2>
+      <div class="card-grid">
+        <a class="card" href="tools/webrtc-internals.html">
+          <div class="card-icon">🔧</div>
+          <div class="card-title">WebRTC Internals Analyzer</div>
+          <div class="card-desc">
+            Upload a webrtc-internals dump to visualize RTT, jitter, packet loss, bitrate, and concealment metrics.
+          </div>
+        </a>
+      </div>
+    </section>
+  </div>
+
+</body>
+</html>

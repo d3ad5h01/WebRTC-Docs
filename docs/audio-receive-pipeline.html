@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Receive Pipeline &mdash; WebRTC Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+    .diagram svg {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      height: auto;
+    }
+    .diagram-caption {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+      font-style: italic;
+    }
+    .component-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 16px 0;
+    }
+    .component-card h4 {
+      color: var(--accent);
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .component-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .key-point {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: var(--accent-dim);
+      border-radius: var(--radius);
+      margin: 16px 0;
+    }
+    .key-point-icon {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .key-point p {
+      margin: 0;
+      color: var(--text);
+    }
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="doc-header">
+      <a href="../index.html">&larr; Back to all docs</a>
+      <h1>Audio Receive Pipeline</h1>
+      <p class="subtitle">Inbound audio flow &mdash; from network packets to speaker</p>
+    </header>
+
+    <article class="doc-content">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Pipeline Overview -->
+      <!-- ============================================ -->
+      <h2>Pipeline Overview</h2>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#128161;</span>
+        <p><strong>Flow:</strong> Packets → Jitter Buffer → Decoder → PLC → Speaker</p>
+      </div>
+
+      <div class="diagram">
+        <svg viewBox="0 0 850 200" xmlns="http://www.w3.org/2000/svg">
+          <text x="425" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">Packets → Jitter Buffer → Decoder → PLC → Speaker</text>
+          
+          <!-- Packets (irregular) -->
+          <rect x="30" y="70" width="100" height="80" rx="8" fill="#242836" stroke="#f87171" stroke-width="2"/>
+          <text x="80" y="95" text-anchor="middle" fill="#f87171" font-size="10" font-weight="500">Packets</text>
+          <text x="80" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">(irregular)</text>
+          <text x="80" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">Opus encoded</text>
+          
+          <!-- Arrow -->
+          <path d="M130 110 L170 110" stroke="#8b90a0" stroke-width="2" marker-end="url(#arr1)"/>
+          
+          <!-- Jitter Buffer -->
+          <rect x="175" y="70" width="120" height="80" rx="8" fill="#242836" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="235" y="95" text-anchor="middle" fill="#6c9cfc" font-size="10" font-weight="500">Jitter Buffer</text>
+          <text x="235" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">Reorder</text>
+          <text x="235" y="130" text-anchor="middle" fill="#8b90a0" font-size="9">Buffer</text>
+          
+          <!-- Arrow with label -->
+          <path d="M295 110 L345 110" stroke="#4ade80" stroke-width="2" marker-end="url(#arr2)"/>
+          <text x="320" y="100" text-anchor="middle" fill="#4ade80" font-size="8">10ms</text>
+          <text x="320" y="130" text-anchor="middle" fill="#8b90a0" font-size="7">constant rate</text>
+          
+          <!-- Decoder -->
+          <rect x="350" y="70" width="120" height="80" rx="8" fill="#242836" stroke="#fbbf24" stroke-width="2"/>
+          <text x="410" y="95" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="500">Decoder</text>
+          <text x="410" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">Opus → PCM</text>
+          <text x="410" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">(decompress)</text>
+          
+          <!-- Arrow -->
+          <path d="M470 110 L510 110" stroke="#8b90a0" stroke-width="2" marker-end="url(#arr1)"/>
+          
+          <!-- PLC -->
+          <rect x="515" y="70" width="120" height="80" rx="8" fill="#242836" stroke="#f87171" stroke-width="2"/>
+          <text x="575" y="95" text-anchor="middle" fill="#f87171" font-size="10" font-weight="500">PLC</text>
+          <text x="575" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">Fill gaps</text>
+          <text x="575" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">(if needed)</text>
+          
+          <!-- Arrow -->
+          <path d="M635 110 L675 110" stroke="#8b90a0" stroke-width="2" marker-end="url(#arr1)"/>
+          
+          <!-- PCM Output -->
+          <rect x="680" y="70" width="100" height="80" rx="8" fill="#242836" stroke="#4ade80" stroke-width="2"/>
+          <text x="730" y="95" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">PCM</text>
+          <text x="730" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">(raw audio)</text>
+          <text x="730" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">→ Speaker</text>
+          
+          <!-- Data format labels -->
+          <text x="80" y="170" text-anchor="middle" fill="#f87171" font-size="9">Compressed</text>
+          <text x="235" y="170" text-anchor="middle" fill="#6c9cfc" font-size="9">Compressed</text>
+          <text x="410" y="170" text-anchor="middle" fill="#fbbf24" font-size="9">PCM out</text>
+          <text x="575" y="170" text-anchor="middle" fill="#f87171" font-size="9">PCM</text>
+          <text x="730" y="170" text-anchor="middle" fill="#4ade80" font-size="9">PCM</text>
+          
+          <defs>
+            <marker id="arr1" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#8b90a0"/>
+            </marker>
+            <marker id="arr2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4ade80"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">Data flows left to right: compressed packets become raw audio</p>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Each Component -->
+      <!-- ============================================ -->
+      <h2>Each Component</h2>
+
+      <div class="component-grid">
+        <div class="component-card">
+          <h4>1. Packets (Input)</h4>
+          <p>Opus-encoded audio arrives from network. Irregular timing due to jitter.</p>
+        </div>
+        <div class="component-card">
+          <h4>2. Jitter Buffer</h4>
+          <p>Collects packets, reorders them, releases at steady 10ms intervals.</p>
+        </div>
+        <div class="component-card">
+          <h4>3. Decoder</h4>
+          <p>Converts Opus → PCM. Just format conversion, no smoothing.</p>
+        </div>
+        <div class="component-card">
+          <h4>4. PLC</h4>
+          <p>Packet Loss Concealment. Generates fake audio when packets are missing.</p>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: What is PCM -->
+      <!-- ============================================ -->
+      <h2>What is PCM?</h2>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#128161;</span>
+        <p><strong>PCM = Pulse Code Modulation</strong> &mdash; Raw, uncompressed audio. Just numbers representing the sound wave at each moment.</p>
+      </div>
+
+      <div class="diagram">
+        <svg viewBox="0 0 800 280" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">PCM: Sound Wave → Numbers</text>
+          
+          <!-- Sound wave -->
+          <text x="150" y="70" text-anchor="middle" fill="#8b90a0" font-size="11">Analog Sound Wave</text>
+          <path d="M50 130 Q100 80 150 130 Q200 180 250 130 Q300 80 350 130 Q400 180 450 130" 
+                fill="none" stroke="#6c9cfc" stroke-width="3"/>
+          
+          <!-- Sampling points -->
+          <circle cx="50" cy="130" r="5" fill="#4ade80"/>
+          <circle cx="100" cy="95" r="5" fill="#4ade80"/>
+          <circle cx="150" cy="130" r="5" fill="#4ade80"/>
+          <circle cx="200" cy="165" r="5" fill="#4ade80"/>
+          <circle cx="250" cy="130" r="5" fill="#4ade80"/>
+          <circle cx="300" cy="95" r="5" fill="#4ade80"/>
+          <circle cx="350" cy="130" r="5" fill="#4ade80"/>
+          <circle cx="400" cy="165" r="5" fill="#4ade80"/>
+          <circle cx="450" cy="130" r="5" fill="#4ade80"/>
+          
+          <!-- Vertical lines to show sampling -->
+          <line x1="50" y1="130" x2="50" y2="180" stroke="#4ade80" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="100" y1="95" x2="100" y2="180" stroke="#4ade80" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="150" y1="130" x2="150" y2="180" stroke="#4ade80" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="200" y1="165" x2="200" y2="180" stroke="#4ade80" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="250" y1="130" x2="250" y2="180" stroke="#4ade80" stroke-width="1" stroke-dasharray="3,2"/>
+          
+          <text x="150" y="200" text-anchor="middle" fill="#4ade80" font-size="10">Sample points (48,000 per second)</text>
+          
+          <!-- Arrow -->
+          <path d="M480 130 L530 130" stroke="#fbbf24" stroke-width="3" marker-end="url(#arr-yellow)"/>
+          
+          <!-- PCM numbers -->
+          <rect x="550" y="60" width="200" height="160" rx="8" fill="#242836" stroke="#4ade80" stroke-width="2"/>
+          <text x="650" y="90" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="500">PCM Data</text>
+          
+          <text x="580" y="120" fill="#6c9cfc" font-family="monospace" font-size="11">[0]</text>
+          <text x="650" y="120" fill="#e1e4ed" font-family="monospace" font-size="11">0</text>
+          
+          <text x="580" y="140" fill="#6c9cfc" font-family="monospace" font-size="11">[1]</text>
+          <text x="650" y="140" fill="#e1e4ed" font-family="monospace" font-size="11">12,450</text>
+          
+          <text x="580" y="160" fill="#6c9cfc" font-family="monospace" font-size="11">[2]</text>
+          <text x="650" y="160" fill="#e1e4ed" font-family="monospace" font-size="11">0</text>
+          
+          <text x="580" y="180" fill="#6c9cfc" font-family="monospace" font-size="11">[3]</text>
+          <text x="650" y="180" fill="#e1e4ed" font-family="monospace" font-size="11">-12,450</text>
+          
+          <text x="580" y="200" fill="#6c9cfc" font-family="monospace" font-size="11">[4]</text>
+          <text x="650" y="200" fill="#e1e4ed" font-family="monospace" font-size="11">0</text>
+          
+          <text x="650" y="230" text-anchor="middle" fill="#8b90a0" font-size="9">Just numbers!</text>
+          
+          <!-- Explanation -->
+          <rect x="200" y="240" width="400" height="30" rx="6" fill="#242836"/>
+          <text x="400" y="260" text-anchor="middle" fill="#8b90a0" font-size="11">Each number = amplitude at that moment (16-bit: -32,768 to +32,767)</text>
+          
+          <defs>
+            <marker id="arr-yellow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">PCM captures the wave height at regular intervals</p>
+      </div>
+
+      <div class="component-grid">
+        <div class="component-card">
+          <h4>Compressed (Opus)</h4>
+          <p>Smart encoding. Removes redundancy. Small file size. ~32 kbps for voice.</p>
+        </div>
+        <div class="component-card">
+          <h4>PCM (Raw)</h4>
+          <p>Just numbers. No compression. Large size. ~768 kbps for 48kHz stereo 16-bit.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Opus (Compressed)</th>
+            <th>PCM (Raw)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Size</td>
+            <td>~32 kbps</td>
+            <td>~768 kbps</td>
+          </tr>
+          <tr>
+            <td>CPU to play</td>
+            <td>Needs decoding</td>
+            <td>Direct to speaker</td>
+          </tr>
+          <tr>
+            <td>Editable</td>
+            <td>No</td>
+            <td>Yes (just numbers)</td>
+          </tr>
+          <tr>
+            <td>PLC possible</td>
+            <td>No</td>
+            <td>Yes</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Key Points -->
+      <!-- ============================================ -->
+      <h2>Key Points</h2>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#9888;</span>
+        <p><strong>Jitter Buffer → Decoder rate is CONSTANT (10ms)</strong> &mdash; driven by audio hardware clock, not network.</p>
+      </div>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#9888;</span>
+        <p><strong>PLC works on PCM only</strong> &mdash; needs to see the waveform pattern to predict missing audio.</p>
+      </div>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#9888;</span>
+        <p><strong>Decoder just converts format</strong> &mdash; no smoothing, no buffering. That's the Jitter Buffer's job.</p>
+      </div>
+
+    </article>
+
+    <footer class="doc-footer">
+      <a href="../index.html">&larr; Back to all docs</a>
+    </footer>
+  </div>
+
+</body>
+</html>

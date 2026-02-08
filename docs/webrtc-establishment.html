@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Establishment &amp; ICE &mdash; WebRTC Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+    .diagram svg {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      height: auto;
+    }
+    .diagram-caption {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+      font-style: italic;
+    }
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 16px 0;
+      position: relative;
+      padding-left: 70px;
+    }
+    .step-card::before {
+      content: attr(data-step);
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      color: var(--bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .step-card h4 {
+      color: var(--accent);
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .step-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .step-card code {
+      background: var(--accent-dim);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 32px 0 16px 0;
+    }
+    .phase-badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .phase-signaling { background: #6c9cfc33; color: #6c9cfc; }
+    .phase-ice { background: #a78bfa33; color: #a78bfa; }
+    .phase-dtls { background: #fbbf2433; color: #fbbf24; }
+    .phase-ready { background: #4ade8033; color: #4ade80; }
+    .key-point {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: var(--accent-dim);
+      border-radius: var(--radius);
+      margin: 16px 0;
+    }
+    .key-point-icon {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .key-point p {
+      margin: 0;
+      color: var(--text);
+    }
+    .timeline {
+      position: relative;
+      padding-left: 30px;
+      margin: 24px 0;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .timeline-item {
+      position: relative;
+      padding: 16px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -26px;
+      top: 24px;
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+    }
+    .timeline-item h5 {
+      color: var(--accent);
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+    .timeline-item p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .code-block {
+      background: #0f1117;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .code-block pre {
+      margin: 0;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+    .code-block .comment { color: #6b7280; }
+    .code-block .keyword { color: #c084fc; }
+    .code-block .function { color: #60a5fa; }
+    .code-block .string { color: #4ade80; }
+    .code-block .await { color: #fbbf24; }
+    .state-table {
+      width: 100%;
+      margin: 16px 0;
+    }
+    .state-table td:first-child {
+      font-family: 'Fira Code', monospace;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="doc-header">
+      <a href="../index.html">&larr; Back to all docs</a>
+      <h1>WebRTC Establishment &amp; ICE</h1>
+      <p class="subtitle">How two peers connect &mdash; from offer to media flow</p>
+    </header>
+
+    <article class="doc-content">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Overview -->
+      <!-- ============================================ -->
+      <h2>The Big Picture</h2>
+
+      <p>Before any audio or video can flow, WebRTC peers must:</p>
+      <ol>
+        <li><strong>Exchange session descriptions</strong> (SDP offer/answer)</li>
+        <li><strong>Find a network path</strong> (ICE candidates)</li>
+        <li><strong>Establish encryption</strong> (DTLS handshake)</li>
+      </ol>
+
+      <div class="diagram">
+        <svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+          <text x="450" y="30" text-anchor="middle" fill="#e1e4ed" font-size="16" font-weight="600">WebRTC Connection Establishment Flow</text>
+          
+          <!-- Peer A -->
+          <rect x="50" y="60" width="150" height="500" rx="12" fill="#1a1d27" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="125" y="90" text-anchor="middle" fill="#6c9cfc" font-size="14" font-weight="600">PEER A (Caller)</text>
+          
+          <!-- Peer B -->
+          <rect x="700" y="60" width="150" height="500" rx="12" fill="#1a1d27" stroke="#4ade80" stroke-width="2"/>
+          <text x="775" y="90" text-anchor="middle" fill="#4ade80" font-size="14" font-weight="600">PEER B (Callee)</text>
+          
+          <!-- Signaling Server -->
+          <rect x="350" y="60" width="200" height="60" rx="8" fill="#242836" stroke="#8b90a0" stroke-width="2"/>
+          <text x="450" y="95" text-anchor="middle" fill="#8b90a0" font-size="12" font-weight="500">Signaling Server</text>
+          
+          <!-- Step 1: Create Offer -->
+          <rect x="70" y="140" width="110" height="35" rx="6" fill="#242836" stroke="#6c9cfc"/>
+          <text x="125" y="162" text-anchor="middle" fill="#6c9cfc" font-size="9" font-weight="500">createOffer()</text>
+          
+          <!-- Step 2: Set Local Description -->
+          <rect x="70" y="190" width="110" height="35" rx="6" fill="#242836" stroke="#6c9cfc"/>
+          <text x="125" y="205" text-anchor="middle" fill="#6c9cfc" font-size="8" font-weight="500">setLocalDescription</text>
+          <text x="125" y="218" text-anchor="middle" fill="#8b90a0" font-size="7">(offer)</text>
+          
+          <!-- Arrow: Send Offer -->
+          <path d="M180 207 L700 207" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrow-yellow)"/>
+          <text x="450" y="197" text-anchor="middle" fill="#fbbf24" font-size="10">SDP Offer via Signaling</text>
+          
+          <!-- Step 3: Set Remote Description (B) -->
+          <rect x="720" y="190" width="110" height="35" rx="6" fill="#242836" stroke="#4ade80"/>
+          <text x="775" y="205" text-anchor="middle" fill="#4ade80" font-size="8" font-weight="500">setRemoteDescription</text>
+          <text x="775" y="218" text-anchor="middle" fill="#8b90a0" font-size="7">(offer)</text>
+          
+          <!-- Step 4: Create Answer -->
+          <rect x="720" y="240" width="110" height="35" rx="6" fill="#242836" stroke="#4ade80"/>
+          <text x="775" y="262" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="500">createAnswer()</text>
+          
+          <!-- Step 5: Set Local Description (B) -->
+          <rect x="720" y="290" width="110" height="35" rx="6" fill="#242836" stroke="#4ade80"/>
+          <text x="775" y="305" text-anchor="middle" fill="#4ade80" font-size="8" font-weight="500">setLocalDescription</text>
+          <text x="775" y="318" text-anchor="middle" fill="#8b90a0" font-size="7">(answer)</text>
+          
+          <!-- Arrow: Send Answer -->
+          <path d="M720 307 L180 307" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrow-yellow-left)"/>
+          <text x="450" y="297" text-anchor="middle" fill="#fbbf24" font-size="10">SDP Answer via Signaling</text>
+          
+          <!-- Step 6: Set Remote Description (A) -->
+          <rect x="70" y="290" width="110" height="35" rx="6" fill="#242836" stroke="#6c9cfc"/>
+          <text x="125" y="305" text-anchor="middle" fill="#6c9cfc" font-size="8" font-weight="500">setRemoteDescription</text>
+          <text x="125" y="318" text-anchor="middle" fill="#8b90a0" font-size="7">(answer)</text>
+          
+          <!-- ICE Phase -->
+          <rect x="250" y="350" width="400" height="100" rx="10" fill="#0f1117" stroke="#a78bfa" stroke-width="2" stroke-dasharray="5,3"/>
+          <text x="450" y="375" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="600">ICE Connectivity Checks</text>
+          
+          <!-- ICE Candidates exchange -->
+          <path d="M180 380 L700 380" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+          <path d="M700 400 L180 400" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-purple-left)"/>
+          <text x="450" y="395" text-anchor="middle" fill="#a78bfa" font-size="9">ICE Candidates (STUN checks)</text>
+          
+          <!-- ICE Connected -->
+          <rect x="380" y="420" width="140" height="25" rx="4" fill="#4ade8033"/>
+          <text x="450" y="437" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">ICE Connected</text>
+          
+          <!-- DTLS Phase -->
+          <rect x="250" y="460" width="400" height="50" rx="8" fill="#0f1117" stroke="#fbbf24" stroke-width="2"/>
+          <text x="450" y="490" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="500">DTLS Handshake (Key Exchange)</text>
+          
+          <!-- Ready -->
+          <rect x="300" y="530" width="300" height="40" rx="8" fill="#4ade8022" stroke="#4ade80" stroke-width="2"/>
+          <text x="450" y="555" text-anchor="middle" fill="#4ade80" font-size="13" font-weight="600">Ready for Media Flow</text>
+          
+          <!-- Arrow markers -->
+          <defs>
+            <marker id="arrow-yellow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrow-yellow-left" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto">
+              <polygon points="10 0, 0 3.5, 10 7" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+            </marker>
+            <marker id="arrow-purple-left" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto">
+              <polygon points="10 0, 0 3.5, 10 7" fill="#a78bfa"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">Complete WebRTC connection establishment sequence</p>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Signaling Phase -->
+      <!-- ============================================ -->
+      <h2>Phase 1: Signaling (SDP Exchange)</h2>
+
+      <div class="phase-header">
+        <span class="phase-badge phase-signaling">Signaling</span>
+        <span>Exchanging session descriptions</span>
+      </div>
+
+      <p>SDP (Session Description Protocol) describes what each peer can send/receive: codecs, media types, ICE credentials, etc.</p>
+
+      <div class="step-card" data-step="1">
+        <h4>Create Offer</h4>
+        <p>Caller creates an SDP offer describing their capabilities. This includes supported codecs (Opus, VP8, etc.), media lines, and ICE credentials.</p>
+      </div>
+
+      <div class="code-block">
+<pre><span class="comment">// Peer A (Caller)</span>
+<span class="keyword">const</span> offer = <span class="await">await</span> peerConnection.<span class="function">createOffer</span>();
+<span class="comment">// offer.sdp contains the SDP string</span></pre>
+      </div>
+
+      <div class="step-card" data-step="2">
+        <h4>Set Local Description (Caller)</h4>
+        <p>Caller sets the offer as their local description. This starts ICE candidate gathering.</p>
+      </div>
+
+      <div class="code-block">
+<pre><span class="comment">// Peer A</span>
+<span class="await">await</span> peerConnection.<span class="function">setLocalDescription</span>(offer);
+<span class="comment">// ICE gathering begins here</span></pre>
+      </div>
+
+      <div class="key-point">
+        <span class="key-point-icon">📡</span>
+        <p><strong>Send offer to Peer B via your signaling server</strong> (WebSocket, HTTP, Firebase, etc.). WebRTC doesn't define how signaling works &mdash; that's up to you.</p>
+      </div>
+
+      <div class="step-card" data-step="3">
+        <h4>Set Remote Description (Callee)</h4>
+        <p>Callee receives the offer and sets it as their remote description. Now they know what the caller wants.</p>
+      </div>
+
+      <div class="code-block">
+<pre><span class="comment">// Peer B (Callee)</span>
+<span class="await">await</span> peerConnection.<span class="function">setRemoteDescription</span>(offer);
+<span class="comment">// Peer B now knows Peer A's capabilities</span></pre>
+      </div>
+
+      <div class="step-card" data-step="4">
+        <h4>Create Answer</h4>
+        <p>Callee creates an answer based on the offer. The answer contains their compatible capabilities.</p>
+      </div>
+
+      <div class="code-block">
+<pre><span class="comment">// Peer B</span>
+<span class="keyword">const</span> answer = <span class="await">await</span> peerConnection.<span class="function">createAnswer</span>();</pre>
+      </div>
+
+      <div class="step-card" data-step="5">
+        <h4>Set Local Description (Callee)</h4>
+        <p>Callee sets the answer as their local description. Their ICE gathering also starts.</p>
+      </div>
+
+      <div class="code-block">
+<pre><span class="comment">// Peer B</span>
+<span class="await">await</span> peerConnection.<span class="function">setLocalDescription</span>(answer);
+<span class="comment">// Send answer back to Peer A via signaling</span></pre>
+      </div>
+
+      <div class="step-card" data-step="6">
+        <h4>Set Remote Description (Caller)</h4>
+        <p>Caller receives the answer and sets it as their remote description. SDP exchange complete!</p>
+      </div>
+
+      <div class="code-block">
+<pre><span class="comment">// Peer A</span>
+<span class="await">await</span> peerConnection.<span class="function">setRemoteDescription</span>(answer);
+<span class="comment">// Both peers now know each other's capabilities</span></pre>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: ICE Phase -->
+      <!-- ============================================ -->
+      <h2>Phase 2: ICE (Finding a Path)</h2>
+
+      <div class="phase-header">
+        <span class="phase-badge phase-ice">ICE</span>
+        <span>Interactive Connectivity Establishment</span>
+      </div>
+
+      <p>ICE finds the best network path between peers, handling NATs and firewalls.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="30" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">ICE Candidate Types</text>
+          
+          <!-- Peer A -->
+          <rect x="50" y="80" width="120" height="280" rx="10" fill="#1a1d27" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="110" y="110" text-anchor="middle" fill="#6c9cfc" font-size="12" font-weight="600">Peer A</text>
+          <text x="110" y="130" text-anchor="middle" fill="#8b90a0" font-size="9">192.168.1.10</text>
+          
+          <!-- Peer B -->
+          <rect x="630" y="80" width="120" height="280" rx="10" fill="#1a1d27" stroke="#4ade80" stroke-width="2"/>
+          <text x="690" y="110" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="600">Peer B</text>
+          <text x="690" y="130" text-anchor="middle" fill="#8b90a0" font-size="9">192.168.2.20</text>
+          
+          <!-- NAT A -->
+          <rect x="200" y="120" width="100" height="60" rx="8" fill="#242836" stroke="#f87171" stroke-width="2"/>
+          <text x="250" y="150" text-anchor="middle" fill="#f87171" font-size="10" font-weight="500">NAT A</text>
+          <text x="250" y="168" text-anchor="middle" fill="#8b90a0" font-size="8">203.0.113.1</text>
+          
+          <!-- NAT B -->
+          <rect x="500" y="120" width="100" height="60" rx="8" fill="#242836" stroke="#f87171" stroke-width="2"/>
+          <text x="550" y="150" text-anchor="middle" fill="#f87171" font-size="10" font-weight="500">NAT B</text>
+          <text x="550" y="168" text-anchor="middle" fill="#8b90a0" font-size="8">198.51.100.1</text>
+          
+          <!-- STUN Server -->
+          <rect x="325" y="60" width="150" height="50" rx="8" fill="#242836" stroke="#a78bfa" stroke-width="2"/>
+          <text x="400" y="90" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500">STUN Server</text>
+          
+          <!-- TURN Server -->
+          <rect x="325" y="200" width="150" height="50" rx="8" fill="#242836" stroke="#fbbf24" stroke-width="2"/>
+          <text x="400" y="230" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="500">TURN Server</text>
+          
+          <!-- Candidate Type 1: Host -->
+          <rect x="220" y="280" width="360" height="35" rx="6" fill="#4ade8022" stroke="#4ade80"/>
+          <text x="400" y="295" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">1. Host Candidate (local IP)</text>
+          <text x="400" y="308" text-anchor="middle" fill="#8b90a0" font-size="8">Direct connection if on same network</text>
+          
+          <!-- Candidate Type 2: Server Reflexive -->
+          <rect x="220" y="320" width="360" height="35" rx="6" fill="#a78bfa22" stroke="#a78bfa"/>
+          <text x="400" y="335" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="500">2. Server Reflexive (srflx) via STUN</text>
+          <text x="400" y="348" text-anchor="middle" fill="#8b90a0" font-size="8">Public IP discovered by STUN server</text>
+          
+          <!-- Candidate Type 3: Relay -->
+          <rect x="220" y="360" width="360" height="35" rx="6" fill="#fbbf2422" stroke="#fbbf24"/>
+          <text x="400" y="375" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="500">3. Relay Candidate via TURN</text>
+          <text x="400" y="388" text-anchor="middle" fill="#8b90a0" font-size="8">Fallback when direct connection fails</text>
+          
+          <!-- Arrows -->
+          <path d="M170 150 L200 150" stroke="#6c9cfc" stroke-width="1.5"/>
+          <path d="M300 150 L500 150" stroke="#8b90a0" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <path d="M600 150 L630 150" stroke="#4ade80" stroke-width="1.5"/>
+          
+          <!-- STUN arrows -->
+          <path d="M250 120 L350 100" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <path d="M450 100 L550 120" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="3,2"/>
+        </svg>
+        <p class="diagram-caption">ICE tries candidates in order of preference: host &rarr; srflx &rarr; relay</p>
+      </div>
+
+      <h3>ICE Candidate Gathering</h3>
+
+      <p>When you call <code>setLocalDescription()</code>, ICE starts gathering candidates:</p>
+
+      <div class="code-block">
+<pre>peerConnection.<span class="function">onicecandidate</span> = (event) => {
+  <span class="keyword">if</span> (event.candidate) {
+    <span class="comment">// Send this candidate to the other peer via signaling</span>
+    signalingChannel.<span class="function">send</span>({
+      type: <span class="string">'ice-candidate'</span>,
+      candidate: event.candidate
+    });
+  }
+};
+
+<span class="comment">// On the receiving peer</span>
+<span class="await">await</span> peerConnection.<span class="function">addIceCandidate</span>(receivedCandidate);</pre>
+      </div>
+
+      <h3>STUN: Discovering Public IP</h3>
+
+      <p>STUN (Session Traversal Utilities for NAT) helps peers discover their public IP address:</p>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <h5>1. Peer sends STUN Binding Request</h5>
+          <p>Peer A sends a request to the STUN server from behind NAT</p>
+        </div>
+        <div class="timeline-item">
+          <h5>2. STUN server sees public IP</h5>
+          <p>Server sees the request coming from NAT's public IP (203.0.113.1:54321)</p>
+        </div>
+        <div class="timeline-item">
+          <h5>3. STUN server responds</h5>
+          <p>Server tells Peer A: "You appear as 203.0.113.1:54321 from here"</p>
+        </div>
+        <div class="timeline-item">
+          <h5>4. Peer creates srflx candidate</h5>
+          <p>Peer A now has a server-reflexive candidate to share with Peer B</p>
+        </div>
+      </div>
+
+      <h3>ICE Connectivity Checks</h3>
+
+      <p>Once both peers have candidates, they perform connectivity checks:</p>
+
+      <table class="state-table">
+        <thead>
+          <tr>
+            <th>ICE State</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>new</td>
+            <td>ICE agent created, no checks yet</td>
+          </tr>
+          <tr>
+            <td>checking</td>
+            <td>Connectivity checks in progress</td>
+          </tr>
+          <tr>
+            <td>connected</td>
+            <td>At least one working candidate pair found</td>
+          </tr>
+          <tr>
+            <td>completed</td>
+            <td>All checks done, best pair selected</td>
+          </tr>
+          <tr>
+            <td>failed</td>
+            <td>No working path found</td>
+          </tr>
+          <tr>
+            <td>disconnected</td>
+            <td>Connection lost, may recover</td>
+          </tr>
+          <tr>
+            <td>closed</td>
+            <td>ICE agent shut down</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ============================================ -->
+      <!-- SECTION: DTLS Phase -->
+      <!-- ============================================ -->
+      <h2>Phase 3: DTLS Handshake</h2>
+
+      <div class="phase-header">
+        <span class="phase-badge phase-dtls">DTLS</span>
+        <span>Datagram Transport Layer Security</span>
+      </div>
+
+      <p>Once ICE finds a path, DTLS establishes encryption. It's like TLS but for UDP.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+          <text x="350" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">DTLS Handshake</text>
+          
+          <!-- Peer A -->
+          <rect x="50" y="50" width="100" height="220" rx="8" fill="#1a1d27" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="100" y="75" text-anchor="middle" fill="#6c9cfc" font-size="11" font-weight="600">Peer A</text>
+          
+          <!-- Peer B -->
+          <rect x="550" y="50" width="100" height="220" rx="8" fill="#1a1d27" stroke="#4ade80" stroke-width="2"/>
+          <text x="600" y="75" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="600">Peer B</text>
+          
+          <!-- ClientHello -->
+          <path d="M150 100 L550 100" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-dtls)"/>
+          <text x="350" y="95" text-anchor="middle" fill="#fbbf24" font-size="10">ClientHello</text>
+          
+          <!-- ServerHello + Certificate -->
+          <path d="M550 140 L150 140" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-dtls-left)"/>
+          <text x="350" y="135" text-anchor="middle" fill="#fbbf24" font-size="10">ServerHello + Certificate</text>
+          
+          <!-- ClientKeyExchange -->
+          <path d="M150 180 L550 180" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-dtls)"/>
+          <text x="350" y="175" text-anchor="middle" fill="#fbbf24" font-size="10">ClientKeyExchange + Finished</text>
+          
+          <!-- ServerFinished -->
+          <path d="M550 220 L150 220" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-dtls-left)"/>
+          <text x="350" y="215" text-anchor="middle" fill="#fbbf24" font-size="10">Finished</text>
+          
+          <!-- Encrypted -->
+          <rect x="200" y="245" width="300" height="30" rx="6" fill="#4ade8022" stroke="#4ade80"/>
+          <text x="350" y="265" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="500">SRTP Keys Derived &rarr; Encrypted Media</text>
+          
+          <defs>
+            <marker id="arrow-dtls" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrow-dtls-left" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto">
+              <polygon points="10 0, 0 3.5, 10 7" fill="#fbbf24"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">DTLS handshake derives keys for SRTP encryption</p>
+      </div>
+
+      <div class="key-point">
+        <span class="key-point-icon">🔐</span>
+        <p><strong>DTLS derives SRTP keys.</strong> After the handshake, both peers have shared secrets used to encrypt all media packets with SRTP.</p>
+      </div>
+
+      <h3>DTLS States</h3>
+
+      <table class="state-table">
+        <thead>
+          <tr>
+            <th>DTLS State</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>new</td>
+            <td>DTLS not started</td>
+          </tr>
+          <tr>
+            <td>connecting</td>
+            <td>Handshake in progress</td>
+          </tr>
+          <tr>
+            <td>connected</td>
+            <td>Handshake complete, keys derived</td>
+          </tr>
+          <tr>
+            <td>closed</td>
+            <td>Transport closed</td>
+          </tr>
+          <tr>
+            <td>failed</td>
+            <td>Handshake failed</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Ready for Media -->
+      <!-- ============================================ -->
+      <h2>Phase 4: Ready for Media Flow</h2>
+
+      <div class="phase-header">
+        <span class="phase-badge phase-ready">READY</span>
+        <span>Connection established</span>
+      </div>
+
+      <h3>Connection State Summary</h3>
+
+      <table class="state-table">
+        <thead>
+          <tr>
+            <th>State</th>
+            <th>ICE</th>
+            <th>DTLS</th>
+            <th>Media</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>new</td>
+            <td>Not started</td>
+            <td>Not started</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>connecting</td>
+            <td>Checking</td>
+            <td>Connecting</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>connected</td>
+            <td>Connected</td>
+            <td>Connected</td>
+            <td>Yes!</td>
+          </tr>
+          <tr>
+            <td>disconnected</td>
+            <td>Disconnected</td>
+            <td>-</td>
+            <td>Interrupted</td>
+          </tr>
+          <tr>
+            <td>failed</td>
+            <td>Failed</td>
+            <td>Failed</td>
+            <td>No</td>
+          </tr>
+        </tbody>
+      </table>
+
+    </article>
+
+    <footer class="doc-footer">
+      <a href="../index.html">&larr; Back to all docs</a>
+    </footer>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring Audio Stats &mdash; WebRTC Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .stat-card h3 {
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stat-card .definition {
+      font-size: 1.1rem;
+      color: var(--text);
+      margin-bottom: 16px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+    .stat-card .formula {
+      background: var(--bg);
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .stat-card .formula code {
+      background: none;
+      padding: 0;
+    }
+    .threshold-table {
+      width: 100%;
+      margin-top: 16px;
+      font-size: 0.9rem;
+    }
+    .threshold-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .threshold-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .threshold-table .good { color: #4ade80; }
+    .threshold-table .moderate { color: #fbbf24; }
+    .threshold-table .bad { color: #f87171; }
+    .indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .indicator.good { background: #4ade80; }
+    .indicator.moderate { background: #fbbf24; }
+    .indicator.bad { background: #f87171; }
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+    .code-block pre {
+      margin: 0;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    .code-block .comment { color: #6b7280; }
+    .code-block .keyword { color: #c084fc; }
+    .code-block .string { color: #4ade80; }
+    .code-block .number { color: #fbbf24; }
+    .code-block .property { color: #6c9cfc; }
+    .key-point {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: var(--accent-dim);
+      border-radius: var(--radius);
+      margin: 20px 0;
+    }
+    .key-point-icon {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .key-point p {
+      margin: 0;
+      color: var(--text);
+    }
+    .diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+    .diagram svg {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      height: auto;
+    }
+    .diagram-caption {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+      font-style: italic;
+    }
+    .stat-source {
+      display: inline-block;
+      background: var(--bg);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px 0;
+    }
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .toc h3 {
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .toc ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .toc li {
+      padding: 6px 0;
+    }
+    .toc a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .toc a:hover {
+      text-decoration: underline;
+    }
+    .toc .sub-item {
+      padding-left: 20px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="doc-header">
+      <a href="../index.html">&larr; Back to all docs</a>
+      <h1>Monitoring Audio Stats</h1>
+      <p class="subtitle">Delta-based metrics for real-time audio quality monitoring</p>
+    </header>
+
+    <article class="doc-content">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Introduction -->
+      <!-- ============================================ -->
+      <div class="key-point">
+        <span class="key-point-icon">&#128161;</span>
+        <p><strong>Key Concept:</strong> Most WebRTC stats are <em>cumulative</em>. To get meaningful real-time values, you must calculate the <strong>delta</strong> (difference) between two snapshots taken at regular intervals (e.g., every 1 second).</p>
+      </div>
+
+      <!-- Table of Contents -->
+      <div class="toc">
+        <h3>Contents</h3>
+        <ul>
+          <li><a href="#delta-calculation">Delta Calculation Pattern</a></li>
+          <li><a href="#rtt">1. Round-Trip Time (RTT)</a>
+            <ul>
+              <li class="sub-item"><a href="#rtt-candidate-pair">1.1 ICE Candidate Pair RTT</a></li>
+              <li class="sub-item"><a href="#rtt-remote-inbound">1.2 Remote Inbound RTT</a></li>
+            </ul>
+          </li>
+          <li><a href="#jitter">2. Jitter</a></li>
+          <li><a href="#outbound">3. Outbound</a>
+            <ul>
+              <li class="sub-item"><a href="#outbound-packet-loss">3.1 Packet Loss</a></li>
+              <li class="sub-item"><a href="#outbound-bitrate">3.2 Bitrate</a></li>
+            </ul>
+          </li>
+          <li><a href="#inbound">4. Inbound</a>
+            <ul>
+              <li class="sub-item"><a href="#inbound-bitrate">4.1 Bitrate</a></li>
+              <li class="sub-item" style="padding-left: 40px;"><a href="#inbound-rtp">4.1.1 RTP Payload Bitrate</a></li>
+              <li class="sub-item" style="padding-left: 40px;"><a href="#inbound-header">4.1.2 Header Bytes Bitrate</a></li>
+              <li class="sub-item" style="padding-left: 40px;"><a href="#inbound-rtcp">4.1.3 RTCP Bitrate</a></li>
+              <li class="sub-item" style="padding-left: 40px;"><a href="#total-transport">4.1.4 Total Transport Bitrate</a></li>
+              <li class="sub-item"><a href="#inbound-packet-loss">4.2 Packet Loss</a></li>
+              <li class="sub-item"><a href="#jitter-buffer">4.3 Jitter Buffer</a></li>
+              <li class="sub-item" style="padding-left: 40px;"><a href="#jitter-buffer-metrics">4.3.1 Jitter Buffer Metrics</a></li>
+              <li class="sub-item" style="padding-left: 40px;"><a href="#samples-added-removed">4.3.2 Samples Added/Removed</a></li>
+              <li class="sub-item"><a href="#decoder">4.4 Decoder</a></li>
+              <li class="sub-item" style="padding-left: 40px;"><a href="#silent-concealment">4.4.1 Silent Concealment</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Delta Calculation Pattern -->
+      <!-- ============================================ -->
+      <h2 id="delta-calculation">Delta Calculation Pattern</h2>
+
+      <p>Before diving into individual stats, here's the pattern for calculating deltas:</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">Delta = Current Snapshot - Previous Snapshot</text>
+          
+          <!-- Timeline -->
+          <line x1="100" y1="100" x2="700" y2="100" stroke="#2e3345" stroke-width="2"/>
+          
+          <!-- Snapshot 1 -->
+          <circle cx="200" cy="100" r="12" fill="#6c9cfc"/>
+          <text x="200" y="75" text-anchor="middle" fill="#6c9cfc" font-size="11" font-weight="500">Snapshot 1</text>
+          <text x="200" y="130" text-anchor="middle" fill="#8b90a0" font-size="10">t = 0s</text>
+          <text x="200" y="145" text-anchor="middle" fill="#8b90a0" font-size="10">bytesReceived: 50,000</text>
+          
+          <!-- Snapshot 2 -->
+          <circle cx="400" cy="100" r="12" fill="#6c9cfc"/>
+          <text x="400" y="75" text-anchor="middle" fill="#6c9cfc" font-size="11" font-weight="500">Snapshot 2</text>
+          <text x="400" y="130" text-anchor="middle" fill="#8b90a0" font-size="10">t = 1s</text>
+          <text x="400" y="145" text-anchor="middle" fill="#8b90a0" font-size="10">bytesReceived: 56,000</text>
+          
+          <!-- Delta calculation -->
+          <rect x="520" y="80" width="160" height="50" rx="8" fill="#4ade80" fill-opacity="0.2" stroke="#4ade80"/>
+          <text x="600" y="100" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="500">Delta = 6,000 bytes</text>
+          <text x="600" y="118" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="500">= 48 kbps</text>
+          
+          <!-- Arrow -->
+          <path d="M220 100 L380 100" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="300" y="90" text-anchor="middle" fill="#fbbf24" font-size="10">1 second interval</text>
+          
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">Cumulative stats must be differenced to get per-interval values</p>
+      </div>
+
+      <!-- Critical: Timestamp Behavior -->
+      <h3>Critical: Report Timestamps</h3>
+
+      <div class="key-point" style="background: rgba(248, 113, 113, 0.1); border: 1px solid #f87171;">
+        <span class="key-point-icon">&#9888;</span>
+        <p><strong>Important:</strong> Each stat report has its own <code>timestamp</code>. Different reports within the same <code>getStats()</code> call may have <em>different</em> timestamps!</p>
+      </div>
+
+      <div class="diagram">
+        <svg viewBox="0 0 800 280" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">Timestamp Differences Within a Single getStats() Call</text>
+          
+          <!-- Local time reference -->
+          <text x="80" y="70" fill="#8b90a0" font-size="11">Local Time:</text>
+          <text x="180" y="70" fill="#e1e4ed" font-size="12" font-weight="500">1000ms</text>
+          
+          <!-- getStats box -->
+          <rect x="50" y="90" width="700" height="160" rx="12" fill="#1a1d27" stroke="#2e3345" stroke-width="2"/>
+          <text x="400" y="115" text-anchor="middle" fill="#6c9cfc" font-size="12" font-weight="600">getStats() Response</text>
+          
+          <!-- Local reports -->
+          <rect x="80" y="135" width="280" height="100" rx="8" fill="#242836" stroke="#4ade80" stroke-width="1"/>
+          <text x="220" y="158" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="500">Local Reports</text>
+          
+          <text x="100" y="180" fill="#8b90a0" font-size="10">inbound-rtp</text>
+          <text x="240" y="180" fill="#4ade80" font-size="10" font-family="monospace">timestamp: 998ms</text>
+          
+          <text x="100" y="200" fill="#8b90a0" font-size="10">outbound-rtp</text>
+          <text x="240" y="200" fill="#4ade80" font-size="10" font-family="monospace">timestamp: 999ms</text>
+          
+          <text x="100" y="220" fill="#8b90a0" font-size="10">candidate-pair</text>
+          <text x="240" y="220" fill="#4ade80" font-size="10" font-family="monospace">timestamp: 1000ms</text>
+          
+          <!-- Remote reports -->
+          <rect x="440" y="135" width="280" height="100" rx="8" fill="#242836" stroke="#f87171" stroke-width="1"/>
+          <text x="580" y="158" text-anchor="middle" fill="#f87171" font-size="11" font-weight="500">Remote Reports</text>
+          
+          <text x="460" y="180" fill="#8b90a0" font-size="10">remote-inbound-rtp</text>
+          <text x="620" y="180" fill="#f87171" font-size="10" font-family="monospace">timestamp: 200ms</text>
+          
+          <text x="460" y="200" fill="#8b90a0" font-size="10">remote-outbound-rtp</text>
+          <text x="620" y="200" fill="#f87171" font-size="10" font-family="monospace">timestamp: 180ms</text>
+          
+          <!-- Lag indicators -->
+          <text x="220" y="248" text-anchor="middle" fill="#4ade80" font-size="9">~2-30ms behind local time</text>
+          <text x="580" y="248" text-anchor="middle" fill="#f87171" font-size="9">~200-800ms+ behind local time</text>
+        </svg>
+        <p class="diagram-caption">Remote reports can be significantly delayed compared to local reports</p>
+      </div>
+
+      <table class="threshold-table">
+        <thead>
+          <tr>
+            <th>Report Type</th>
+            <th>Timestamp Lag</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>inbound-rtp</code>, <code>outbound-rtp</code></td>
+            <td class="good">~20-30ms</td>
+            <td>Local measurement</td>
+          </tr>
+          <tr>
+            <td><code>candidate-pair</code>, <code>transport</code></td>
+            <td class="good">~20-30ms</td>
+            <td>Local measurement</td>
+          </tr>
+          <tr>
+            <td><code>remote-inbound-rtp</code></td>
+            <td class="bad">200-800ms+</td>
+            <td>From RTCP Receiver Report</td>
+          </tr>
+          <tr>
+            <td><code>remote-outbound-rtp</code></td>
+            <td class="bad">200-800ms+</td>
+            <td>From RTCP Sender Report</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Rules for Safe Delta Calculation</h3>
+
+      <div class="stat-card">
+        <h3 style="color: #f87171;">
+          <span>&#10060;</span>
+          <span>Never Mix Reports</span>
+        </h3>
+        <p class="definition">
+          Do NOT combine metrics from different report types. Each report type has its own timestamp and update frequency.
+        </p>
+        <div class="code-block">
+          <pre><span class="comment">// ❌ WRONG: Mixing inbound-rtp with remote-inbound-rtp timestamps</span>
+<span class="keyword">const</span> deltaTime = inboundRtp.<span class="property">timestamp</span> - remoteInboundRtp.<span class="property">timestamp</span>; <span class="comment">// Could be 800ms off!</span>
+
+<span class="comment">// ✅ CORRECT: Use same report type for delta</span>
+<span class="keyword">const</span> deltaTime = currentInboundRtp.<span class="property">timestamp</span> - prevInboundRtp.<span class="property">timestamp</span>;</pre>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <h3 style="color: #4ade80;">
+          <span>&#9989;</span>
+          <span>Always Use Delta, Not Absolute</span>
+        </h3>
+        <p class="definition">
+          Since remote reports can be delayed, absolute values at any moment are unreliable. Always calculate deltas between consecutive snapshots of the <em>same</em> report type.
+        </p>
+        <div class="code-block">
+          <pre><span class="comment">// ❌ WRONG: Using absolute packetsLost value</span>
+console.<span class="property">log</span>(<span class="string">`Lost: ${remoteInbound.packetsLost}`</span>); <span class="comment">// Stale data!</span>
+
+<span class="comment">// ✅ CORRECT: Delta between same report type</span>
+<span class="keyword">const</span> deltaLost = currentRemoteInbound.<span class="property">packetsLost</span> - prevRemoteInbound.<span class="property">packetsLost</span>;
+<span class="keyword">const</span> deltaTime = (currentRemoteInbound.<span class="property">timestamp</span> - prevRemoteInbound.<span class="property">timestamp</span>) / <span class="number">1000</span>;
+<span class="keyword">const</span> lossRate = deltaLost / deltaTime; <span class="comment">// packets lost per second</span></pre>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- ============================================ -->
+      <!-- SECTION: RTT -->
+      <!-- ============================================ -->
+      <h2 id="rtt">1. Round-Trip Time (RTT)</h2>
+
+      <p>RTT can be obtained from two different sources, each measuring different things:</p>
+
+      <!-- RTT Source 1: ICE Candidate Pair -->
+      <h3 id="rtt-candidate-pair">1.1 ICE Candidate Pair RTT</h3>
+      <div class="stat-card">
+        <h3>
+          <span>currentRoundTripTime</span>
+          <span class="stat-source">RTCIceCandidatePairStats</span>
+        </h3>
+        <p class="definition">
+          The time it takes for a STUN connectivity check to travel from the local peer to the remote peer and back. Measured in <strong>seconds</strong>.
+        </p>
+        
+        <p>This is an <strong>instantaneous</strong> value (not cumulative), so you can read it directly without delta calculation.</p>
+
+        <div class="formula">
+          <code>RTT (ms) = currentRoundTripTime * 1000</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Extract RTT from candidate-pair stats</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'candidate-pair'</span> && stat.<span class="property">state</span> === <span class="string">'succeeded'</span>) {
+    <span class="keyword">const</span> rttMs = stat.<span class="property">currentRoundTripTime</span> * <span class="number">1000</span>;
+    console.<span class="property">log</span>(<span class="string">`ICE RTT: ${rttMs.toFixed(1)}ms`</span>);
+  }
+});</pre>
+        </div>
+
+        <div class="key-point">
+          <span class="key-point-icon">&#128161;</span>
+          <p><strong>When to use:</strong> Best for measuring network path latency. Updated frequently via STUN keep-alives. Available even when no media is flowing.</p>
+        </div>
+      </div>
+
+      <!-- RTT Source 2: Remote Inbound RTP -->
+      <h3 id="rtt-remote-inbound">1.2 Remote Inbound RTT</h3>
+      <div class="stat-card">
+        <h3>
+          <span>roundTripTime</span>
+          <span class="stat-source">RTCRemoteInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          The RTT calculated from RTCP Receiver Reports sent by the remote peer. This measures the round-trip time for <strong>RTP/RTCP packets</strong> specifically, not STUN. Measured in <strong>seconds</strong>.
+        </p>
+        
+        <p>Also an <strong>instantaneous</strong> value. Derived from the delay between sending an SR (Sender Report) and receiving the corresponding RR (Receiver Report).</p>
+
+        <div class="formula">
+          <code>RTT (ms) = roundTripTime * 1000</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Extract RTT from remote-inbound-rtp stats</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'remote-inbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">if</span> (stat.<span class="property">roundTripTime</span> !== <span class="keyword">undefined</span>) {
+      <span class="keyword">const</span> rttMs = stat.<span class="property">roundTripTime</span> * <span class="number">1000</span>;
+      console.<span class="property">log</span>(<span class="string">`RTCP RTT: ${rttMs.toFixed(1)}ms`</span>);
+    }
+  }
+});</pre>
+        </div>
+
+        <div class="key-point">
+          <span class="key-point-icon">&#128161;</span>
+          <p><strong>When to use:</strong> Best for correlating with media quality issues. Only available when media is flowing and RTCP reports are being exchanged. May be <code>undefined</code> if no Receiver Report has been received yet.</p>
+        </div>
+      </div>
+
+      <!-- Comparison Diagram -->
+      <div class="diagram">
+        <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">Two Sources of RTT</text>
+          
+          <!-- Left side: ICE RTT -->
+          <rect x="50" y="50" width="320" height="240" rx="12" fill="#1a1d27" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="210" y="80" text-anchor="middle" fill="#6c9cfc" font-size="12" font-weight="600">ICE / STUN RTT</text>
+          <text x="210" y="100" text-anchor="middle" fill="#8b90a0" font-size="10">candidate-pair.currentRoundTripTime</text>
+          
+          <!-- STUN flow -->
+          <rect x="80" y="120" width="80" height="40" rx="6" fill="#242836"/>
+          <text x="120" y="145" text-anchor="middle" fill="#e1e4ed" font-size="10">Local</text>
+          
+          <rect x="260" y="120" width="80" height="40" rx="6" fill="#242836"/>
+          <text x="300" y="145" text-anchor="middle" fill="#e1e4ed" font-size="10">Remote</text>
+          
+          <path d="M160 130 L260 130" stroke="#6c9cfc" stroke-width="2" marker-end="url(#arrow-ice)"/>
+          <text x="210" y="125" text-anchor="middle" fill="#6c9cfc" font-size="9">STUN Request</text>
+          
+          <path d="M260 150 L160 150" stroke="#4ade80" stroke-width="2" marker-end="url(#arrow-ice-back)"/>
+          <text x="210" y="168" text-anchor="middle" fill="#4ade80" font-size="9">STUN Response</text>
+          
+          <!-- ICE characteristics -->
+          <text x="80" y="200" fill="#8b90a0" font-size="10">&#8226; Updated frequently (keep-alives)</text>
+          <text x="80" y="218" fill="#8b90a0" font-size="10">&#8226; Works without media flow</text>
+          <text x="80" y="236" fill="#8b90a0" font-size="10">&#8226; Measures network path latency</text>
+          <text x="80" y="254" fill="#8b90a0" font-size="10">&#8226; Local timestamp (fresh)</text>
+          <text x="80" y="272" fill="#4ade80" font-size="10">&#8226; Recommended for monitoring</text>
+          
+          <!-- Right side: RTCP RTT -->
+          <rect x="430" y="50" width="320" height="240" rx="12" fill="#1a1d27" stroke="#fbbf24" stroke-width="2"/>
+          <text x="590" y="80" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="600">RTCP RTT</text>
+          <text x="590" y="100" text-anchor="middle" fill="#8b90a0" font-size="10">remote-inbound-rtp.roundTripTime</text>
+          
+          <!-- RTCP flow -->
+          <rect x="460" y="120" width="80" height="40" rx="6" fill="#242836"/>
+          <text x="500" y="145" text-anchor="middle" fill="#e1e4ed" font-size="10">Local</text>
+          
+          <rect x="640" y="120" width="80" height="40" rx="6" fill="#242836"/>
+          <text x="680" y="145" text-anchor="middle" fill="#e1e4ed" font-size="10">Remote</text>
+          
+          <path d="M540 130 L640 130" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-rtcp)"/>
+          <text x="590" y="125" text-anchor="middle" fill="#fbbf24" font-size="9">RTCP SR</text>
+          
+          <path d="M640 150 L540 150" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-rtcp-back)"/>
+          <text x="590" y="168" text-anchor="middle" fill="#a78bfa" font-size="9">RTCP RR</text>
+          
+          <!-- RTCP characteristics -->
+          <text x="460" y="200" fill="#8b90a0" font-size="10">&#8226; Updated every ~1-5 seconds</text>
+          <text x="460" y="218" fill="#8b90a0" font-size="10">&#8226; Requires active media flow</text>
+          <text x="460" y="236" fill="#8b90a0" font-size="10">&#8226; Measures RTP path latency</text>
+          <text x="460" y="254" fill="#f87171" font-size="10">&#8226; Remote timestamp (can be stale)</text>
+          <text x="460" y="272" fill="#8b90a0" font-size="10">&#8226; May be undefined initially</text>
+          
+          <!-- Arrow markers -->
+          <defs>
+            <marker id="arrow-ice" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#6c9cfc"/>
+            </marker>
+            <marker id="arrow-ice-back" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4ade80"/>
+            </marker>
+            <marker id="arrow-rtcp" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrow-rtcp-back" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">ICE RTT uses STUN, RTCP RTT uses Sender/Receiver Reports</p>
+      </div>
+
+      <!-- Comparison Table -->
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>ICE RTT</th>
+            <th>RTCP RTT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Source</strong></td>
+            <td><code>candidate-pair.currentRoundTripTime</code></td>
+            <td><code>remote-inbound-rtp.roundTripTime</code></td>
+          </tr>
+          <tr>
+            <td><strong>Mechanism</strong></td>
+            <td>STUN Binding Request/Response</td>
+            <td>RTCP SR → RR round trip</td>
+          </tr>
+          <tr>
+            <td><strong>Update Frequency</strong></td>
+            <td>Every few seconds (keep-alives)</td>
+            <td>Every 1-5 seconds (RTCP interval)</td>
+          </tr>
+          <tr>
+            <td><strong>Timestamp Freshness</strong></td>
+            <td class="good">Local (fresh)</td>
+            <td class="bad">Remote (can be 200-800ms stale)</td>
+          </tr>
+          <tr>
+            <td><strong>Availability</strong></td>
+            <td>Always (even without media)</td>
+            <td>Only when media is flowing</td>
+          </tr>
+          <tr>
+            <td><strong>Best For</strong></td>
+            <td>General network monitoring</td>
+            <td>Correlating with media quality</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Quality Thresholds -->
+      <h3>Quality Thresholds</h3>
+      <table class="threshold-table">
+        <thead>
+          <tr>
+            <th>Quality</th>
+            <th>RTT Range</th>
+            <th>User Experience</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="indicator good"></span><span class="good">Good</span></td>
+            <td>&lt; 150ms</td>
+            <td>Natural conversation flow</td>
+          </tr>
+          <tr>
+            <td><span class="indicator moderate"></span><span class="moderate">Moderate</span></td>
+            <td>150-300ms</td>
+            <td>Slight delay, still usable</td>
+          </tr>
+          <tr>
+            <td><span class="indicator bad"></span><span class="bad">Poor</span></td>
+            <td>&gt; 300ms</td>
+            <td>Noticeable lag, conversation overlap</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <hr class="section-divider">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Jitter -->
+      <!-- ============================================ -->
+      <h2 id="jitter">2. Jitter</h2>
+
+      <div class="stat-card">
+        <h3>
+          <span>jitter</span>
+          <span class="stat-source">RTCInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          Statistical variance in packet arrival times, calculated using the RFC 3550 algorithm. Measured in <strong>seconds</strong>. This is an <strong>instantaneous</strong> value representing the current estimated jitter.
+        </p>
+
+        <div class="formula">
+          <code>Jitter (ms) = jitter * 1000</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Extract jitter from inbound-rtp stats</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'inbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">const</span> jitterMs = stat.<span class="property">jitter</span> * <span class="number">1000</span>;
+    console.<span class="property">log</span>(<span class="string">`Jitter: ${jitterMs.toFixed(2)}ms`</span>);
+  }
+});</pre>
+        </div>
+
+        <table class="threshold-table">
+          <thead>
+            <tr>
+              <th>Quality</th>
+              <th>Jitter Range</th>
+              <th>Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="indicator good"></span><span class="good">Good</span></td>
+              <td>&lt; 20ms</td>
+              <td>Minimal buffer needed</td>
+            </tr>
+            <tr>
+              <td><span class="indicator moderate"></span><span class="moderate">Moderate</span></td>
+              <td>20-50ms</td>
+              <td>Buffer adapts, slight latency increase</td>
+            </tr>
+            <tr>
+              <td><span class="indicator bad"></span><span class="bad">Poor</span></td>
+              <td>&gt; 50ms</td>
+              <td>Large buffer, potential audio glitches</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Outbound -->
+      <!-- ============================================ -->
+      <h2 id="outbound">3. Outbound</h2>
+
+      <h3 id="outbound-packet-loss">3.1 Packet Loss</h3>
+
+      <div class="stat-card">
+        <h3>
+          <span>packetsLost / packetsSent</span>
+          <span class="stat-source">RTCOutboundRtpStreamStats + RTCRemoteInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          Percentage of packets sent by you that never reached the remote peer. Calculated from RTCP Receiver Reports sent back by the remote peer.
+        </p>
+
+        <div class="formula">
+          <code>Packet Loss % = (deltaPacketsLost / deltaPacketsSent) * 100</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Calculate outbound packet loss rate</span>
+<span class="keyword">let</span> prevOutbound = <span class="keyword">null</span>;
+<span class="keyword">let</span> prevRemoteInbound = <span class="keyword">null</span>;
+
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'outbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">if</span> (prevOutbound) {
+      <span class="keyword">const</span> deltaPacketsSent = stat.<span class="property">packetsSent</span> - prevOutbound.<span class="property">packetsSent</span>;
+      <span class="comment">// Store for loss calculation</span>
+    }
+    prevOutbound = stat;
+  }
+  
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'remote-inbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">if</span> (prevRemoteInbound) {
+      <span class="keyword">const</span> deltaPacketsLost = stat.<span class="property">packetsLost</span> - prevRemoteInbound.<span class="property">packetsLost</span>;
+      <span class="keyword">const</span> lossRate = (deltaPacketsLost / deltaPacketsSent) * <span class="number">100</span>;
+      console.<span class="property">log</span>(<span class="string">`Outbound Loss: ${lossRate.toFixed(2)}%`</span>);
+    }
+    prevRemoteInbound = stat;
+  }
+});</pre>
+        </div>
+
+        <table class="threshold-table">
+          <thead>
+            <tr>
+              <th>Quality</th>
+              <th>Loss Rate</th>
+              <th>Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="indicator good"></span><span class="good">Good</span></td>
+              <td>&lt; 1%</td>
+              <td>Imperceptible</td>
+            </tr>
+            <tr>
+              <td><span class="indicator moderate"></span><span class="moderate">Moderate</span></td>
+              <td>1-5%</td>
+              <td>Minor artifacts, PLC compensates</td>
+            </tr>
+            <tr>
+              <td><span class="indicator bad"></span><span class="bad">Poor</span></td>
+              <td>&gt; 5%</td>
+              <td>Audible gaps, robotic voice</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 3.2 Outbound Bitrate -->
+      <h3 id="outbound-bitrate">3.2 Bitrate</h3>
+      <div class="stat-card">
+        <h3>
+          <span>bytesSent</span>
+          <span class="stat-source">RTCOutboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          The bitrate of audio data being sent to the remote peer.
+        </p>
+
+        <div class="formula">
+          <code>Outbound Bitrate (bps) = (deltaBytesSent * 8) / deltaTimeSeconds</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Calculate outbound audio bitrate</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'outbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">if</span> (prevOutbound) {
+      <span class="keyword">const</span> deltaTime = (stat.<span class="property">timestamp</span> - prevOutbound.<span class="property">timestamp</span>) / <span class="number">1000</span>;
+      <span class="keyword">const</span> deltaBytes = stat.<span class="property">bytesSent</span> - prevOutbound.<span class="property">bytesSent</span>;
+      <span class="keyword">const</span> bitrate = (deltaBytes * <span class="number">8</span>) / deltaTime;
+      console.<span class="property">log</span>(<span class="string">`Outbound Audio: ${(bitrate / 1000).toFixed(1)} kbps`</span>);
+    }
+    prevOutbound = stat;
+  }
+});</pre>
+        </div>
+
+        <table class="threshold-table">
+          <thead>
+            <tr>
+              <th>Quality</th>
+              <th>Bitrate Range</th>
+              <th>Scenario</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="indicator good"></span><span class="good">Normal</span></td>
+              <td>20-40 kbps</td>
+              <td>Typical voice call</td>
+            </tr>
+            <tr>
+              <td><span class="indicator moderate"></span><span class="moderate">Low</span></td>
+              <td>6-15 kbps</td>
+              <td>Bandwidth constrained</td>
+            </tr>
+            <tr>
+              <td><span class="indicator bad"></span><span class="bad">Very Low</span></td>
+              <td>&lt; 6 kbps</td>
+              <td>Severe congestion, quality degraded</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Inbound -->
+      <!-- ============================================ -->
+      <h2 id="inbound">4. Inbound</h2>
+
+      <!-- 4.1 Inbound Bitrate -->
+      <h3 id="inbound-bitrate">4.1 Bitrate</h3>
+      <p>Inbound bitrate can be measured at multiple levels:</p>
+
+      <!-- 4.1.1 Actual RTP -->
+      <h4 id="inbound-rtp">4.1.1 RTP Payload Bitrate</h4>
+      <div class="stat-card">
+        <h3>
+          <span>bytesReceived</span>
+          <span class="stat-source">RTCInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          The bitrate of actual audio data (payload) received, excluding RTP headers.
+        </p>
+
+        <div class="formula">
+          <code>RTP Bitrate (bps) = (deltaBytesReceived * 8) / deltaTimeSeconds</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Calculate RTP payload bitrate</span>
+<span class="keyword">if</span> (prevStats) {
+  <span class="keyword">const</span> deltaTime = (stat.<span class="property">timestamp</span> - prevStats.<span class="property">timestamp</span>) / <span class="number">1000</span>;
+  <span class="keyword">const</span> deltaBytes = stat.<span class="property">bytesReceived</span> - prevStats.<span class="property">bytesReceived</span>;
+  <span class="keyword">const</span> bitrate = (deltaBytes * <span class="number">8</span>) / deltaTime;
+  console.<span class="property">log</span>(<span class="string">`RTP Bitrate: ${(bitrate / 1000).toFixed(1)} kbps`</span>);
+}</pre>
+        </div>
+      </div>
+
+      <!-- 4.1.2 Header Bytes -->
+      <h4 id="inbound-header">4.1.2 Header Bytes Bitrate</h4>
+      <div class="stat-card">
+        <h3>
+          <span>headerBytesReceived</span>
+          <span class="stat-source">RTCInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          The bitrate consumed by RTP headers (12 bytes minimum per packet, plus extensions).
+        </p>
+
+        <div class="formula">
+          <code>Header Bitrate (bps) = (deltaHeaderBytesReceived * 8) / deltaTimeSeconds</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Calculate header overhead bitrate</span>
+<span class="keyword">if</span> (prevStats && stat.<span class="property">headerBytesReceived</span>) {
+  <span class="keyword">const</span> deltaTime = (stat.<span class="property">timestamp</span> - prevStats.<span class="property">timestamp</span>) / <span class="number">1000</span>;
+  <span class="keyword">const</span> deltaHeaderBytes = stat.<span class="property">headerBytesReceived</span> - prevStats.<span class="property">headerBytesReceived</span>;
+  <span class="keyword">const</span> headerBitrate = (deltaHeaderBytes * <span class="number">8</span>) / deltaTime;
+  console.<span class="property">log</span>(<span class="string">`Header Bitrate: ${(headerBitrate / 1000).toFixed(1)} kbps`</span>);
+}</pre>
+        </div>
+      </div>
+
+      <!-- 4.1.3 RTCP -->
+      <h4 id="inbound-rtcp">4.1.3 RTCP Bitrate</h4>
+      <div class="stat-card">
+        <h3>
+          <span>bytesReceived (RTCP)</span>
+          <span class="stat-source">RTCTransportStats</span>
+        </h3>
+        <p class="definition">
+          The bitrate of RTCP control packets (Receiver Reports, Sender Reports, etc.).
+        </p>
+
+        <div class="formula">
+          <code>RTCP Bitrate (bps) = (deltaBytesReceived_rtcp * 8) / deltaTimeSeconds</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Get RTCP bitrate from transport stats</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'transport'</span>) {
+    <span class="keyword">if</span> (prevTransport) {
+      <span class="keyword">const</span> deltaTime = (stat.<span class="property">timestamp</span> - prevTransport.<span class="property">timestamp</span>) / <span class="number">1000</span>;
+      
+      <span class="comment">// Total bytes includes RTP + RTCP</span>
+      <span class="keyword">const</span> totalDelta = stat.<span class="property">bytesReceived</span> - prevTransport.<span class="property">bytesReceived</span>;
+      
+      <span class="comment">// RTCP is typically 5-10% of total</span>
+      console.<span class="property">log</span>(<span class="string">`Transport Received: ${(totalDelta * 8 / deltaTime / 1000).toFixed(1)} kbps`</span>);
+    }
+    prevTransport = stat;
+  }
+});</pre>
+        </div>
+      </div>
+
+      <!-- 4.1.4 Total Transport -->
+      <h4 id="total-transport">4.1.4 Total Transport Bitrate</h4>
+      <div class="stat-card">
+        <h3>
+          <span>bytesReceived (Transport)</span>
+          <span class="stat-source">RTCTransportStats</span>
+        </h3>
+        <p class="definition">
+          The total bitrate on the transport layer, including all RTP streams, RTCP, and DTLS overhead.
+        </p>
+
+        <div class="formula">
+          <code>Total Inbound (bps) = (transport.deltaBytesReceived * 8) / deltaTimeSeconds</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Total transport bitrate (all streams combined)</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'transport'</span>) {
+    <span class="keyword">if</span> (prevTransport) {
+      <span class="keyword">const</span> deltaTime = (stat.<span class="property">timestamp</span> - prevTransport.<span class="property">timestamp</span>) / <span class="number">1000</span>;
+      <span class="keyword">const</span> deltaBytes = stat.<span class="property">bytesReceived</span> - prevTransport.<span class="property">bytesReceived</span>;
+      <span class="keyword">const</span> totalBitrate = (deltaBytes * <span class="number">8</span>) / deltaTime;
+      console.<span class="property">log</span>(<span class="string">`Total Inbound: ${(totalBitrate / 1000).toFixed(1)} kbps`</span>);
+    }
+    prevTransport = stat;
+  }
+});</pre>
+        </div>
+
+        <table class="threshold-table">
+          <thead>
+            <tr>
+              <th>Audio Codec</th>
+              <th>Typical Bitrate</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Opus (voice)</td>
+              <td>6-32 kbps</td>
+              <td>Variable bitrate, adapts to content</td>
+            </tr>
+            <tr>
+              <td>Opus (music)</td>
+              <td>64-128 kbps</td>
+              <td>Higher quality for music</td>
+            </tr>
+            <tr>
+              <td>G.711 (PCMU/PCMA)</td>
+              <td>64 kbps</td>
+              <td>Fixed bitrate, legacy codec</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 4.2 Inbound Packet Loss -->
+      <h3 id="inbound-packet-loss">4.2 Packet Loss</h3>
+      <div class="stat-card">
+        <h3>
+          <span>packetsDiscarded</span>
+          <span class="stat-source">RTCInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          Packets that arrived but were discarded by the jitter buffer (arrived too late to be useful, duplicates, or buffer overflow).
+        </p>
+
+        <div class="formula">
+          <code>Discard Rate = (deltaPacketsDiscarded / deltaPacketsReceived) * 100</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Calculate packet discard rate</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'inbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">if</span> (prevStats && stat.<span class="property">packetsDiscarded</span> !== <span class="keyword">undefined</span>) {
+      <span class="keyword">const</span> deltaDiscarded = stat.<span class="property">packetsDiscarded</span> - prevStats.<span class="property">packetsDiscarded</span>;
+      <span class="keyword">const</span> deltaReceived = stat.<span class="property">packetsReceived</span> - prevStats.<span class="property">packetsReceived</span>;
+      <span class="keyword">const</span> discardRate = deltaReceived > <span class="number">0</span> 
+        ? (deltaDiscarded / deltaReceived) * <span class="number">100</span> 
+        : <span class="number">0</span>;
+      console.<span class="property">log</span>(<span class="string">`Discard Rate: ${discardRate.toFixed(2)}%`</span>);
+    }
+    prevStats = stat;
+  }
+});</pre>
+        </div>
+
+        <table class="threshold-table">
+          <thead>
+            <tr>
+              <th>Quality</th>
+              <th>Discard Rate</th>
+              <th>Cause</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="indicator good"></span><span class="good">Good</span></td>
+              <td>&lt; 0.5%</td>
+              <td>Normal operation</td>
+            </tr>
+            <tr>
+              <td><span class="indicator moderate"></span><span class="moderate">Moderate</span></td>
+              <td>0.5-2%</td>
+              <td>High jitter, packets arriving late</td>
+            </tr>
+            <tr>
+              <td><span class="indicator bad"></span><span class="bad">Poor</span></td>
+              <td>&gt; 2%</td>
+              <td>Severe network issues or buffer overflow</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 4.3 Jitter Buffer -->
+      <h3 id="jitter-buffer">4.3 Jitter Buffer</h3>
+
+      <!-- 4.3.1 Jitter Buffer Metrics -->
+      <h4 id="jitter-buffer-metrics">4.3.1 Jitter Buffer Metrics</h4>
+
+      <div class="stat-card">
+        <h3>
+          <span>Jitter Buffer Delay Rate</span>
+          <span class="stat-source">RTCInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          The average delay samples spend in the jitter buffer during the measurement interval.
+        </p>
+
+        <div class="formula">
+          <code>Avg Buffer Delay (ms) = (deltaJitterBufferDelay / deltaJitterBufferEmittedCount) * 1000</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Calculate jitter buffer delay rate</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'inbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">if</span> (prevStats) {
+      <span class="keyword">const</span> deltaDelay = stat.<span class="property">jitterBufferDelay</span> - prevStats.<span class="property">jitterBufferDelay</span>;
+      <span class="keyword">const</span> deltaEmitted = stat.<span class="property">jitterBufferEmittedCount</span> - prevStats.<span class="property">jitterBufferEmittedCount</span>;
+      
+      <span class="keyword">if</span> (deltaEmitted > <span class="number">0</span>) {
+        <span class="keyword">const</span> avgDelayMs = (deltaDelay / deltaEmitted) * <span class="number">1000</span>;
+        console.<span class="property">log</span>(<span class="string">`Buffer Delay: ${avgDelayMs.toFixed(1)}ms`</span>);
+      }
+      
+      <span class="comment">// Also calculate target delay</span>
+      <span class="keyword">const</span> deltaTarget = stat.<span class="property">jitterBufferTargetDelay</span> - prevStats.<span class="property">jitterBufferTargetDelay</span>;
+      <span class="keyword">if</span> (deltaEmitted > <span class="number">0</span>) {
+        <span class="keyword">const</span> avgTargetMs = (deltaTarget / deltaEmitted) * <span class="number">1000</span>;
+        console.<span class="property">log</span>(<span class="string">`Target Delay: ${avgTargetMs.toFixed(1)}ms`</span>);
+      }
+    }
+    prevStats = stat;
+  }
+});</pre>
+        </div>
+
+        <table class="threshold-table">
+          <thead>
+            <tr>
+              <th>Quality</th>
+              <th>Buffer Delay</th>
+              <th>Interpretation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="indicator good"></span><span class="good">Good</span></td>
+              <td>&lt; 50ms</td>
+              <td>Low latency, stable network</td>
+            </tr>
+            <tr>
+              <td><span class="indicator moderate"></span><span class="moderate">Moderate</span></td>
+              <td>50-150ms</td>
+              <td>Buffer adapting to jitter</td>
+            </tr>
+            <tr>
+              <td><span class="indicator bad"></span><span class="bad">High</span></td>
+              <td>&gt; 150ms</td>
+              <td>High latency, poor network</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 4.3.2 Samples Added/Removed -->
+      <h4 id="samples-added-removed">4.3.2 Samples Added/Removed (Time Stretching)</h4>
+
+      <div class="stat-card">
+        <h3>
+          <span>insertedSamplesForDeceleration / removedSamplesForAcceleration</span>
+          <span class="stat-source">RTCInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          The jitter buffer adjusts audio timing by adding (stretching) or removing (compressing) samples. High values indicate the buffer is actively compensating for network variations.
+        </p>
+
+        <div class="formula">
+          <code>Inserted Rate = deltaInsertedSamples / deltaTimeSeconds</code><br>
+          <code>Removed Rate = deltaRemovedSamples / deltaTimeSeconds</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Track time-stretching activity</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'inbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">if</span> (prevStats) {
+      <span class="keyword">const</span> deltaTime = (stat.<span class="property">timestamp</span> - prevStats.<span class="property">timestamp</span>) / <span class="number">1000</span>;
+      
+      <span class="comment">// Samples inserted (buffer growing - deceleration)</span>
+      <span class="keyword">const</span> deltaInserted = stat.<span class="property">insertedSamplesForDeceleration</span> 
+        - prevStats.<span class="property">insertedSamplesForDeceleration</span>;
+      
+      <span class="comment">// Samples removed (buffer shrinking - acceleration)</span>
+      <span class="keyword">const</span> deltaRemoved = stat.<span class="property">removedSamplesForAcceleration</span> 
+        - prevStats.<span class="property">removedSamplesForAcceleration</span>;
+      
+      <span class="comment">// Convert to milliseconds of audio (at 48kHz)</span>
+      <span class="keyword">const</span> insertedMs = (deltaInserted / <span class="number">48000</span>) * <span class="number">1000</span>;
+      <span class="keyword">const</span> removedMs = (deltaRemoved / <span class="number">48000</span>) * <span class="number">1000</span>;
+      
+      console.<span class="property">log</span>(<span class="string">`Inserted: ${insertedMs.toFixed(1)}ms, Removed: ${removedMs.toFixed(1)}ms`</span>);
+    }
+    prevStats = stat;
+  }
+});</pre>
+        </div>
+
+        <div class="key-point">
+          <span class="key-point-icon">&#128161;</span>
+          <p><strong>Interpretation:</strong> High <code>insertedSamples</code> means the buffer is growing (network getting worse). High <code>removedSamples</code> means the buffer is shrinking (network improving or catching up).</p>
+        </div>
+      </div>
+
+      <!-- 4.4 Decoder -->
+      <h3 id="decoder">4.4 Decoder</h3>
+
+      <!-- 4.4.1 Silent Concealment -->
+      <h4 id="silent-concealment">4.4.1 Silent Concealment</h4>
+
+      <div class="stat-card">
+        <h3>
+          <span>concealedSamples / silentConcealedSamples / concealmentEvents</span>
+          <span class="stat-source">RTCInboundRtpStreamStats</span>
+        </h3>
+        <p class="definition">
+          When packets are lost, the decoder uses Packet Loss Concealment (PLC) to generate replacement audio. <code>silentConcealedSamples</code> are samples replaced with silence (worst case). <code>concealedSamples</code> includes all concealed samples (PLC-generated + silent).
+        </p>
+
+        <div class="formula">
+          <code>Concealment Rate = (deltaConcealedSamples / deltaTotalSamplesReceived) * 100</code><br>
+          <code>Silent Rate = (deltaSilentConcealedSamples / deltaConcealedSamples) * 100</code>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment">// Track concealment metrics</span>
+report.<span class="property">forEach</span>(stat => {
+  <span class="keyword">if</span> (stat.<span class="property">type</span> === <span class="string">'inbound-rtp'</span> && stat.<span class="property">kind</span> === <span class="string">'audio'</span>) {
+    <span class="keyword">if</span> (prevStats) {
+      <span class="comment">// Total concealed samples (PLC + silence)</span>
+      <span class="keyword">const</span> deltaConcealed = stat.<span class="property">concealedSamples</span> - prevStats.<span class="property">concealedSamples</span>;
+      
+      <span class="comment">// Silent samples (complete loss, no PLC possible)</span>
+      <span class="keyword">const</span> deltaSilent = stat.<span class="property">silentConcealedSamples</span> - prevStats.<span class="property">silentConcealedSamples</span>;
+      
+      <span class="comment">// Concealment events (number of gaps)</span>
+      <span class="keyword">const</span> deltaEvents = stat.<span class="property">concealmentEvents</span> - prevStats.<span class="property">concealmentEvents</span>;
+      
+      <span class="comment">// Total samples for percentage</span>
+      <span class="keyword">const</span> deltaTotal = stat.<span class="property">totalSamplesReceived</span> - prevStats.<span class="property">totalSamplesReceived</span>;
+      
+      <span class="keyword">if</span> (deltaTotal > <span class="number">0</span>) {
+        <span class="keyword">const</span> concealmentPct = (deltaConcealed / deltaTotal) * <span class="number">100</span>;
+        <span class="keyword">const</span> silentPct = deltaConcealed > <span class="number">0</span> 
+          ? (deltaSilent / deltaConcealed) * <span class="number">100</span> 
+          : <span class="number">0</span>;
+        
+        console.<span class="property">log</span>(<span class="string">`Concealment: ${concealmentPct.toFixed(2)}%`</span>);
+        console.<span class="property">log</span>(<span class="string">`Silent: ${silentPct.toFixed(1)}% of concealed`</span>);
+        console.<span class="property">log</span>(<span class="string">`Events: ${deltaEvents}`</span>);
+      }
+    }
+    prevStats = stat;
+  }
+});</pre>
+        </div>
+
+        <table class="threshold-table">
+          <thead>
+            <tr>
+              <th>Quality</th>
+              <th>Concealment Rate</th>
+              <th>User Experience</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="indicator good"></span><span class="good">Good</span></td>
+              <td>&lt; 1%</td>
+              <td>Imperceptible</td>
+            </tr>
+            <tr>
+              <td><span class="indicator moderate"></span><span class="moderate">Moderate</span></td>
+              <td>1-5%</td>
+              <td>Occasional artifacts</td>
+            </tr>
+            <tr>
+              <td><span class="indicator bad"></span><span class="bad">Poor</span></td>
+              <td>&gt; 5%</td>
+              <td>Noticeable gaps, robotic sound</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="key-point">
+          <span class="key-point-icon">&#9888;</span>
+          <p><strong>Warning:</strong> High <code>silentConcealedSamples</code> relative to <code>concealedSamples</code> indicates severe packet loss where PLC cannot help. This results in audible silence gaps.</p>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Quick Reference -->
+      <!-- ============================================ -->
+      <h2>Quick Reference Table</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Source</th>
+            <th>Type</th>
+            <th>Formula</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>RTT</code></td>
+            <td>candidate-pair</td>
+            <td>Instant</td>
+            <td><code>currentRoundTripTime * 1000</code></td>
+          </tr>
+          <tr>
+            <td><code>Jitter</code></td>
+            <td>inbound-rtp</td>
+            <td>Instant</td>
+            <td><code>jitter * 1000</code></td>
+          </tr>
+          <tr>
+            <td><code>Inbound Bitrate</code></td>
+            <td>inbound-rtp</td>
+            <td>Delta</td>
+            <td><code>deltaBytesReceived * 8 / deltaTime</code></td>
+          </tr>
+          <tr>
+            <td><code>Outbound Bitrate</code></td>
+            <td>outbound-rtp</td>
+            <td>Delta</td>
+            <td><code>deltaBytesSent * 8 / deltaTime</code></td>
+          </tr>
+          <tr>
+            <td><code>Packet Loss</code></td>
+            <td>remote-inbound-rtp</td>
+            <td>Delta</td>
+            <td><code>deltaPacketsLost / deltaPacketsSent * 100</code></td>
+          </tr>
+          <tr>
+            <td><code>Buffer Delay</code></td>
+            <td>inbound-rtp</td>
+            <td>Delta</td>
+            <td><code>deltaJBDelay / deltaJBEmitted * 1000</code></td>
+          </tr>
+          <tr>
+            <td><code>Concealment</code></td>
+            <td>inbound-rtp</td>
+            <td>Delta</td>
+            <td><code>deltaConcealed / deltaTotalSamples * 100</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+    </article>
+
+    <footer class="doc-footer">
+      <a href="../index.html">&larr; Back to all docs</a>
+    </footer>
+  </div>
+
+</body>
+</html>

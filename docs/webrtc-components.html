@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Components &mdash; WebRTC Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+    .diagram svg {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      height: auto;
+    }
+    .diagram-caption {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+      font-style: italic;
+    }
+    .component-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 16px 0;
+    }
+    .component-card h4 {
+      color: var(--accent);
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .component-card .badge {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .badge-send { background: #4ade8033; color: #4ade80; }
+    .badge-receive { background: #6c9cfc33; color: #6c9cfc; }
+    .badge-both { background: #fbbf2433; color: #fbbf24; }
+    .badge-transport { background: #a78bfa33; color: #a78bfa; }
+    .component-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .key-point {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: var(--accent-dim);
+      border-radius: var(--radius);
+      margin: 16px 0;
+    }
+    .key-point-icon {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .key-point p {
+      margin: 0;
+      color: var(--text);
+    }
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .pcm-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      padding: 20px;
+    }
+    .pcm-box {
+      text-align: center;
+    }
+    .pcm-box h5 {
+      color: var(--text);
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="doc-header">
+      <a href="../index.html">&larr; Back to all docs</a>
+      <h1>WebRTC Components</h1>
+      <p class="subtitle">Architecture overview &mdash; how all the pieces fit together</p>
+    </header>
+
+    <article class="doc-content">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Big Picture -->
+      <!-- ============================================ -->
+      <h2>The Big Picture</h2>
+
+      <div class="diagram">
+        <svg viewBox="0 0 900 700" xmlns="http://www.w3.org/2000/svg">
+          <text x="450" y="30" text-anchor="middle" fill="#e1e4ed" font-size="16" font-weight="600">WebRTC Full Stack</text>
+          
+          <!-- ==================== -->
+          <!-- TOP: SENDER (Outbound) -->
+          <!-- ==================== -->
+          <rect x="30" y="60" width="500" height="280" rx="12" fill="#1a1d27" stroke="#4ade80" stroke-width="2"/>
+          <text x="280" y="90" text-anchor="middle" fill="#4ade80" font-size="14" font-weight="600">SENDER (Outbound)</text>
+          
+          <!-- Microphone -->
+          <rect x="60" y="120" width="100" height="45" rx="8" fill="#242836" stroke="#4ade80"/>
+          <text x="110" y="148" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Microphone</text>
+          
+          <!-- Arrow -->
+          <path d="M160 142 L190 142" stroke="#4ade80" stroke-width="2" marker-end="url(#arrow-green)"/>
+          
+          <!-- Audio Processing -->
+          <rect x="195" y="120" width="100" height="45" rx="8" fill="#242836" stroke="#4ade80"/>
+          <text x="245" y="140" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Audio Proc</text>
+          <text x="245" y="155" text-anchor="middle" fill="#8b90a0" font-size="8">AEC, NS, AGC</text>
+          
+          <!-- Arrow -->
+          <path d="M295 142 L325 142" stroke="#4ade80" stroke-width="2" marker-end="url(#arrow-green)"/>
+          
+          <!-- Encoder -->
+          <rect x="330" y="120" width="100" height="45" rx="8" fill="#242836" stroke="#4ade80"/>
+          <text x="380" y="140" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Encoder</text>
+          <text x="380" y="155" text-anchor="middle" fill="#8b90a0" font-size="8">PCM → Opus</text>
+          
+          <!-- Arrow -->
+          <path d="M380 165 L380 195" stroke="#4ade80" stroke-width="2" marker-end="url(#arrow-green)"/>
+          
+          <!-- Pacer -->
+          <rect x="330" y="200" width="100" height="45" rx="8" fill="#242836" stroke="#4ade80"/>
+          <text x="380" y="228" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Pacer</text>
+          
+          <!-- Arrow to network -->
+          <path d="M430 222 L550 222" stroke="#4ade80" stroke-width="3" marker-end="url(#arrow-green)"/>
+          <text x="490" y="212" text-anchor="middle" fill="#4ade80" font-size="10">Packets →</text>
+          
+          <!-- Data flow labels -->
+          <text x="110" y="180" text-anchor="middle" fill="#8b90a0" font-size="8">PCM</text>
+          <text x="245" y="180" text-anchor="middle" fill="#8b90a0" font-size="8">PCM</text>
+          <text x="380" y="260" text-anchor="middle" fill="#8b90a0" font-size="8">Opus</text>
+          
+          <!-- ==================== -->
+          <!-- BOTTOM: RECEIVER (Inbound) -->
+          <!-- ==================== -->
+          <rect x="30" y="370" width="500" height="280" rx="12" fill="#1a1d27" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="280" y="400" text-anchor="middle" fill="#6c9cfc" font-size="14" font-weight="600">RECEIVER (Inbound)</text>
+          
+          <!-- NetEQ Container -->
+          <rect x="50" y="420" width="350" height="120" rx="10" fill="#0f1117" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,3"/>
+          <text x="225" y="445" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600">NetEQ</text>
+          
+          <!-- Jitter Buffer -->
+          <rect x="70" y="460" width="90" height="55" rx="8" fill="#242836" stroke="#6c9cfc"/>
+          <text x="115" y="483" text-anchor="middle" fill="#6c9cfc" font-size="9" font-weight="500">Jitter Buffer</text>
+          <text x="115" y="498" text-anchor="middle" fill="#8b90a0" font-size="8">Buffering</text>
+          
+          <!-- Arrow -->
+          <path d="M160 487 L185 487" stroke="#6c9cfc" stroke-width="2" marker-end="url(#arrow-blue)"/>
+          <text x="172" y="478" text-anchor="middle" fill="#4ade80" font-size="7">10ms</text>
+          
+          <!-- Decoder -->
+          <rect x="190" y="460" width="90" height="55" rx="8" fill="#242836" stroke="#6c9cfc"/>
+          <text x="235" y="483" text-anchor="middle" fill="#6c9cfc" font-size="9" font-weight="500">Decoder</text>
+          <text x="235" y="498" text-anchor="middle" fill="#8b90a0" font-size="8">Opus → PCM</text>
+          
+          <!-- Arrow -->
+          <path d="M280 487 L305 487" stroke="#6c9cfc" stroke-width="2" marker-end="url(#arrow-blue)"/>
+          
+          <!-- PLC -->
+          <rect x="310" y="460" width="70" height="55" rx="8" fill="#242836" stroke="#f87171"/>
+          <text x="345" y="483" text-anchor="middle" fill="#f87171" font-size="9" font-weight="500">PLC</text>
+          <text x="345" y="498" text-anchor="middle" fill="#8b90a0" font-size="7">if needed</text>
+          
+          <!-- Arrow from network to jitter buffer -->
+          <path d="M550 487 L400 487" stroke="#6c9cfc" stroke-width="3" marker-end="url(#arrow-blue)"/>
+          <text x="475" y="477" text-anchor="middle" fill="#6c9cfc" font-size="10">← Packets</text>
+          
+          <!-- Arrow from PLC to Speaker -->
+          <path d="M345 510 L345 560" stroke="#6c9cfc" stroke-width="2" marker-end="url(#arrow-blue)"/>
+          
+          <!-- Speaker -->
+          <rect x="295" y="560" width="100" height="45" rx="8" fill="#242836" stroke="#6c9cfc"/>
+          <text x="345" y="588" text-anchor="middle" fill="#6c9cfc" font-size="10" font-weight="500">Speaker</text>
+          
+          <!-- Data flow labels -->
+          <text x="115" y="455" text-anchor="middle" fill="#8b90a0" font-size="8">Opus</text>
+          <text x="235" y="455" text-anchor="middle" fill="#8b90a0" font-size="8">PCM</text>
+          <text x="345" y="455" text-anchor="middle" fill="#8b90a0" font-size="8">PCM</text>
+          
+          <!-- ==================== -->
+          <!-- RIGHT: NETWORK -->
+          <!-- ==================== -->
+          <rect x="560" y="60" width="310" height="590" rx="12" fill="#0f1117" stroke="#8b90a0" stroke-width="2"/>
+          <text x="715" y="90" text-anchor="middle" fill="#8b90a0" font-size="14" font-weight="600">NETWORK</text>
+          
+          <!-- Transport stack - showing actual packet structure -->
+          <rect x="590" y="150" width="250" height="250" rx="8" fill="#1a1d27" stroke="#a78bfa" stroke-width="2"/>
+          <text x="715" y="175" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600">PACKET STRUCTURE</text>
+          
+          <!-- UDP/TCP (outermost) -->
+          <rect x="605" y="190" width="220" height="195" rx="6" fill="#242836" stroke="#8b90a0"/>
+          <text x="625" y="210" fill="#8b90a0" font-size="9" font-weight="500">UDP/TCP</text>
+          
+          <!-- SRTP (encrypted RTP) -->
+          <rect x="615" y="220" width="200" height="155" rx="5" fill="#0f1117" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="635" y="240" fill="#6c9cfc" font-size="9" font-weight="500">SRTP</text>
+          
+          <!-- RTP inside -->
+          <rect x="625" y="250" width="180" height="115" rx="4" fill="#242836" stroke="#4ade80"/>
+          <text x="645" y="270" fill="#4ade80" font-size="9" font-weight="500">RTP</text>
+          <text x="715" y="310" text-anchor="middle" fill="#8b90a0" font-size="8">Encrypted</text>
+          <text x="715" y="325" text-anchor="middle" fill="#8b90a0" font-size="8">Audio Payload</text>
+          <text x="715" y="340" text-anchor="middle" fill="#8b90a0" font-size="8">(Opus)</text>
+          
+          <!-- Side notes -->
+          <text x="715" y="420" text-anchor="middle" fill="#a78bfa" font-size="8">ICE finds path</text>
+          
+          <!-- Bidirectional arrow between sender/receiver and network -->
+          <path d="M530 222 L560 222" stroke="#4ade80" stroke-width="2"/>
+          <path d="M530 487 L560 487" stroke="#6c9cfc" stroke-width="2"/>
+          
+          <!-- Legend at bottom -->
+          <rect x="100" y="665" width="700" height="28" rx="6" fill="#242836"/>
+          <circle cx="150" cy="679" r="6" fill="#4ade80"/>
+          <text x="165" y="683" fill="#8b90a0" font-size="10">Sender</text>
+          <circle cx="260" cy="679" r="6" fill="#6c9cfc"/>
+          <text x="275" y="683" fill="#8b90a0" font-size="10">Receiver</text>
+          <circle cx="380" cy="679" r="6" fill="#a78bfa"/>
+          <text x="395" y="683" fill="#8b90a0" font-size="10">Transport</text>
+          <circle cx="510" cy="679" r="6" fill="#fbbf24"/>
+          <text x="525" y="683" fill="#8b90a0" font-size="10">NetEQ</text>
+          <circle cx="620" cy="679" r="6" fill="#f87171"/>
+          <text x="635" y="683" fill="#8b90a0" font-size="10">PLC</text>
+          <circle cx="720" cy="679" r="6" fill="#8b90a0"/>
+          <text x="735" y="683" fill="#8b90a0" font-size="10">Network</text>
+          
+          <!-- Arrow markers -->
+          <defs>
+            <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4ade80"/>
+            </marker>
+            <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#6c9cfc"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">Sender (top) and Receiver (bottom) on left, Network on right</p>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Transport Layer -->
+      <!-- ============================================ -->
+      <h2>Transport Layer</h2>
+
+      <div class="diagram">
+        <svg viewBox="0 0 800 420" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">How WebRTC Packets Actually Look</text>
+          
+          <!-- Step 1: ICE finds path -->
+          <rect x="50" y="50" width="700" height="70" rx="8" fill="#1a1d27" stroke="#a78bfa" stroke-width="2"/>
+          <text x="80" y="75" fill="#a78bfa" font-size="11" font-weight="600">1. ICE finds the path</text>
+          <text x="80" y="95" fill="#8b90a0" font-size="10">ICE uses STUN/TURN to discover the best route through NATs</text>
+          <text x="80" y="110" fill="#8b90a0" font-size="10">Result: IP:Port pair for both peers (the "candidate pair")</text>
+          
+          <!-- Step 2: DTLS handshake -->
+          <rect x="50" y="135" width="700" height="70" rx="8" fill="#1a1d27" stroke="#fbbf24" stroke-width="2"/>
+          <text x="80" y="160" fill="#fbbf24" font-size="11" font-weight="600">2. DTLS handshake (over ICE path)</text>
+          <text x="80" y="180" fill="#8b90a0" font-size="10">DTLS runs over the ICE-discovered path to exchange encryption keys</text>
+          <text x="80" y="195" fill="#8b90a0" font-size="10">Result: Shared secret keys for SRTP encryption</text>
+          
+          <!-- Step 3: Actual packet structure -->
+          <rect x="50" y="220" width="700" height="180" rx="8" fill="#1a1d27" stroke="#4ade80" stroke-width="2"/>
+          <text x="80" y="245" fill="#4ade80" font-size="11" font-weight="600">3. Media packets (SRTP over UDP/TCP)</text>
+          
+          <!-- Packet visualization -->
+          <text x="80" y="275" fill="#8b90a0" font-size="10">Actual packet on the wire:</text>
+          
+          <!-- UDP/TCP layer -->
+          <rect x="80" y="290" width="650" height="45" rx="6" fill="#242836" stroke="#8b90a0" stroke-width="1"/>
+          <text x="105" y="318" fill="#8b90a0" font-size="10" font-weight="500">UDP/TCP</text>
+          
+          <!-- SRTP layer inside -->
+          <rect x="170" y="297" width="545" height="31" rx="4" fill="#0f1117" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="195" y="318" fill="#6c9cfc" font-size="10" font-weight="500">SRTP</text>
+          
+          <!-- RTP inside SRTP -->
+          <rect x="250" y="302" width="450" height="21" rx="3" fill="#242836" stroke="#4ade80" stroke-width="1"/>
+          <text x="270" y="317" fill="#4ade80" font-size="9" font-weight="500">RTP Header</text>
+          <rect x="370" y="304" width="320" height="17" rx="2" fill="#4ade8033"/>
+          <text x="530" y="316" text-anchor="middle" fill="#4ade80" font-size="9">Encrypted Audio Payload (Opus)</text>
+          
+          <!-- Labels -->
+          <text x="80" y="360" fill="#6c9cfc" font-size="9">SRTP = RTP encrypted with keys from DTLS</text>
+          <text x="80" y="375" fill="#8b90a0" font-size="9">Sent over UDP (preferred) or TCP (fallback) on the ICE-discovered path</text>
+          <text x="80" y="390" fill="#a78bfa" font-size="9">ICE keeps checking the path and can switch if network changes</text>
+        </svg>
+        <p class="diagram-caption">ICE finds path → DTLS exchanges keys → SRTP encrypts RTP → sent over UDP/TCP</p>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: All Components -->
+      <!-- ============================================ -->
+      <h2>All Components</h2>
+
+      <h3>Sender Side (Outbound)</h3>
+      <div class="component-grid">
+        <div class="component-card">
+          <h4>Audio Capture <span class="badge badge-send">SEND</span></h4>
+          <p>Gets audio from microphone. Produces PCM samples.</p>
+        </div>
+        <div class="component-card">
+          <h4>Audio Processing <span class="badge badge-send">SEND</span></h4>
+          <p>AEC (echo cancel), NS (noise suppress), AGC (auto gain).</p>
+        </div>
+        <div class="component-card">
+          <h4>Encoder <span class="badge badge-send">SEND</span></h4>
+          <p>Compresses PCM → Opus. Reduces bandwidth.</p>
+        </div>
+        <div class="component-card">
+          <h4>Pacer <span class="badge badge-send">SEND</span></h4>
+          <p>Smooths packet sending. Prevents bursts.</p>
+        </div>
+      </div>
+
+      <h3>Receiver Side (Inbound)</h3>
+      <div class="component-grid">
+        <div class="component-card">
+          <h4>Jitter Buffer <span class="badge badge-receive">RECEIVE</span></h4>
+          <p>Buffers packets. Absorbs network jitter. Reorders.</p>
+        </div>
+        <div class="component-card">
+          <h4>Decoder <span class="badge badge-receive">RECEIVE</span></h4>
+          <p>Decompresses Opus → PCM. Format conversion only.</p>
+        </div>
+        <div class="component-card">
+          <h4>PLC <span class="badge badge-receive">RECEIVE</span></h4>
+          <p>Packet Loss Concealment. Generates fake audio for missing packets.</p>
+        </div>
+        <div class="component-card">
+          <h4>NetEQ <span class="badge badge-receive">RECEIVE</span></h4>
+          <p>Container for Jitter Buffer + Decoder + PLC. The brain.</p>
+        </div>
+      </div>
+
+      <h3>Transport (Both Directions)</h3>
+      <div class="component-grid">
+        <div class="component-card">
+          <h4>ICE <span class="badge badge-transport">TRANSPORT</span></h4>
+          <p>Finds the best path through NATs. Uses STUN/TURN servers.</p>
+        </div>
+        <div class="component-card">
+          <h4>DTLS <span class="badge badge-transport">TRANSPORT</span></h4>
+          <p>Handshake and key exchange. Like TLS but for UDP.</p>
+        </div>
+        <div class="component-card">
+          <h4>SRTP <span class="badge badge-transport">TRANSPORT</span></h4>
+          <p>Encrypts media packets. Uses keys from DTLS.</p>
+        </div>
+        <div class="component-card">
+          <h4>SCTP <span class="badge badge-transport">TRANSPORT</span></h4>
+          <p>Data channels. Reliable/unreliable messaging.</p>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Stats by Component -->
+      <!-- ============================================ -->
+      <h2>Stats by Component</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Stats Type</th>
+            <th>Key Stats</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Jitter Buffer</td>
+            <td><code>RTCInboundRtpStreamStats</code></td>
+            <td><code>jitterBufferDelay</code>, <code>jitterBufferTargetDelay</code></td>
+          </tr>
+          <tr>
+            <td>Decoder/PLC</td>
+            <td><code>RTCInboundRtpStreamStats</code></td>
+            <td><code>concealedSamples</code>, <code>concealmentEvents</code></td>
+          </tr>
+          <tr>
+            <td>Encoder</td>
+            <td><code>RTCOutboundRtpStreamStats</code></td>
+            <td><code>bytesSent</code>, <code>packetsSent</code></td>
+          </tr>
+          <tr>
+            <td>ICE</td>
+            <td><code>RTCIceCandidatePairStats</code></td>
+            <td><code>currentRoundTripTime</code>, <code>state</code></td>
+          </tr>
+          <tr>
+            <td>Transport</td>
+            <td><code>RTCTransportStats</code></td>
+            <td><code>bytesReceived</code>, <code>dtlsState</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+    </article>
+
+    <footer class="doc-footer">
+      <a href="../index.html">&larr; Back to all docs</a>
+    </footer>
+  </div>
+
+</body>
+</html>

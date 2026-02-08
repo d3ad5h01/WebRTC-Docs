@@ -1,24 +1,29 @@
-# WebRTC-Docs
+# WebRTC Docs
 
-Documentation and study notes for WebRTC internals.
+Deepdive into WebRTC internals, audio pipelines, and real-time monitoring.
 
-## Contents
+**[View Documentation](https://d3ad5h01.github.io/WebRTC-Docs/index.html)**
 
-### [Stats/](Stats/)
+## Topics Covered
 
-Audio-only WebRTC statistics from `RTCPeerConnection.getStats()`:
+### Architecture & Components
+- WebRTC Components — ICE, DTLS, Transport, NetEQ, Decoder, PLC
+- PCM & Audio Encoding — Opus, PCMU codecs, AudioContext
 
-- **[JitterBuffer](Stats/JitterBuffer.md)** — Buffer delay, target delay, emitted count, minimum delay
-- **[Concealment](Stats/Concealment.md)** — Concealed samples, silent concealment, concealment events
-- **[SamplesInsertedRemoved](Stats/SamplesInsertedRemoved.md)** — Playout speed adjustments (deceleration / acceleration)
-- **[PacketLoss](Stats/PacketLoss.md)** — Packets lost, packets received, loss rate calculation
-- **[PacketDiscard](Stats/PacketDiscard.md)** — Packets discarded by the jitter buffer (late arrivals)
-- **[AudioLevel](Stats/AudioLevel.md)** — Audio level, energy, duration, silence detection
+### Connection & ICE
+- WebRTC Establishment — Offer/Answer, ICE candidates, STUN, DTLS handshake
 
-Each document covers the stat definitions, derived calculations, scenario behavior (normal, high jitter, burst loss, congestion, etc.), and code examples.
+### Audio Pipelines
+- Audio Send Pipeline — Microphone → Audio Processing → Encoder → Network
+- Audio Receive Pipeline — Packets → Jitter Buffer → Decoder → Speaker
 
-## Reference
+### Jitter & Buffering
+- Jitter Buffer — Buffer delay, target delay, network variance absorption
+- Jitter Calculation — RFC 3550 formula with examples
 
-- [W3C WebRTC Statistics API](https://www.w3.org/TR/webrtc-stats/)
-- [RFC 3550 — RTP](https://datatracker.ietf.org/doc/html/rfc3550)
-- [RFC 6464 — Client-to-Mixer Audio Level](https://datatracker.ietf.org/doc/html/rfc6464)
+### Metrics & Monitoring
+- Monitoring Audio Stats — RTT, jitter, bitrate, packet loss, concealment
+
+## Tools
+
+- **WebRTC Internals Analyzer** — Upload a `webrtc-internals` dump to visualize audio metrics with interactive charts

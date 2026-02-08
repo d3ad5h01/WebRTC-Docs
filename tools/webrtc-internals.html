@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Internals Analyzer &mdash; WebRTC Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* Upload Section */
+    .upload-section {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      margin: 24px 0;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .upload-section.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .upload-section h3 {
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .upload-section p {
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .upload-btn:hover {
+      opacity: 0.9;
+    }
+    .upload-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+    #file-input {
+      display: none;
+    }
+    .file-info {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border-radius: 8px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .file-info.visible {
+      display: inline-flex;
+    }
+    .file-info .filename {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+    .file-info .clear-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+    }
+    .file-info .clear-btn:hover {
+      color: var(--text);
+    }
+
+    /* Connection Selector */
+    .connection-selector {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin: 24px 0;
+      display: none;
+    }
+    .connection-selector.visible {
+      display: block;
+    }
+    .connection-selector label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+    .connection-selector select {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .connection-selector select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    /* Settings Bar */
+    .settings-bar {
+      background: var(--surface, #1e2130);
+      border: 1px solid var(--border, #2e3345);
+      border-radius: var(--radius, 12px);
+      padding: 16px 24px;
+      margin: 24px 0;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .settings-bar.visible {
+      display: flex !important;
+    }
+    .settings-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .settings-group label {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .timezone-display {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      background: var(--bg);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    /* Time Format Toggle */
+    .time-toggle {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .time-toggle-btn {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .time-toggle-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .time-toggle-btn:hover:not(.active) {
+      color: var(--text);
+    }
+
+    /* Charts Container */
+    #charts-container {
+      display: none;
+    }
+    #charts-container.visible {
+      display: block;
+    }
+
+    /* Summary Cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .summary-card .label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .summary-card .value {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--text);
+      font-family: var(--font-mono);
+    }
+    .summary-card .value.good { color: #4ade80; }
+    .summary-card .value.moderate { color: #fbbf24; }
+    .summary-card .value.bad { color: #f87171; }
+    .summary-card .unit {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    /* Chart Section */
+    .chart-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .chart-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .chart-header h3 {
+      color: var(--text);
+      font-size: 1.1rem;
+      margin: 0;
+    }
+    .chart-header .stat-source {
+      background: var(--bg);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    
+    /* Chart Controls */
+    .chart-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    /* Toggle Switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Reset Zoom Button */
+    .reset-zoom-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .reset-zoom-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .reset-zoom-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .toggle-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .toggle-switch.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      background: var(--text);
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle-switch.active::after {
+      transform: translateX(20px);
+      background: var(--bg);
+    }
+
+    /* Chart Container - Scrollable */
+    .chart-wrapper {
+      position: relative;
+    }
+    .chart-container {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 220px;
+      position: relative;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .chart-container.scrollable {
+      overflow-x: scroll;
+    }
+    .chart-container.scrollable::-webkit-scrollbar {
+      height: 8px;
+    }
+    .chart-container.scrollable::-webkit-scrollbar-track {
+      background: var(--surface);
+      border-radius: 4px;
+    }
+    .chart-container.scrollable::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    .chart-container.scrollable::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+    .chart-inner {
+      min-width: 100%;
+      height: 200px;
+    }
+    .chart-container canvas {
+      height: 200px !important;
+    }
+    
+    .chart-legend {
+      display: flex;
+      gap: 20px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .legend-color {
+      width: 12px;
+      height: 3px;
+      border-radius: 2px;
+    }
+    .legend-line {
+      width: 20px;
+      height: 2px;
+      border-radius: 1px;
+    }
+    .legend-line.dashed {
+      background: repeating-linear-gradient(
+        90deg,
+        currentColor 0px,
+        currentColor 4px,
+        transparent 4px,
+        transparent 8px
+      );
+    }
+    .no-data {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* Thresholds Legend */
+    .thresholds {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .threshold {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+    }
+    .threshold-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .threshold-dot.good { background: #4ade80; }
+    .threshold-dot.moderate { background: #fbbf24; }
+    .threshold-dot.bad { background: #f87171; }
+    
+    /* Threshold Lines Legend */
+    .threshold-lines-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .threshold-line-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .threshold-line-sample {
+      width: 20px;
+      height: 2px;
+      border-radius: 1px;
+    }
+    .threshold-line-sample.good { background: #4ade80; }
+    .threshold-line-sample.moderate { background: #fbbf24; }
+    .threshold-line-sample.bad { background: #f87171; }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+    .loading::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin-left: 12px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-muted);
+    }
+    .empty-state h3 {
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    /* Instructions */
+    .instructions {
+      background: var(--accent-dim);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .instructions h4 {
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .instructions ol {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--text-muted);
+    }
+    .instructions li {
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    .instructions code {
+      background: var(--bg);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-size: 0.85rem;
+    }
+    
+    /* Data point count */
+    .data-point-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      background: var(--bg);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="doc-header">
+      <a href="../index.html">&larr; Back to all docs</a>
+      <h1>WebRTC Internals Analyzer</h1>
+      <p class="subtitle">Upload a webrtc-internals dump to visualize audio quality metrics</p>
+    </header>
+
+    <article class="doc-content">
+
+      <!-- Instructions -->
+      <div class="instructions">
+        <h4>How to get a WebRTC Internals dump:</h4>
+        <ol>
+          <li>Open <code>chrome://webrtc-internals</code> in Chrome</li>
+          <li>Start your WebRTC call/session</li>
+          <li>Click <strong>"Create Dump"</strong> at the top of the page</li>
+          <li>Save the <code>.txt</code> file and upload it below</li>
+        </ol>
+      </div>
+
+      <!-- Upload Section -->
+      <div class="upload-section" id="upload-section">
+        <h3>Upload WebRTC Internals Dump</h3>
+        <p>Drag and drop your webrtc-internals.txt file here, or click to browse</p>
+        <button class="upload-btn" id="upload-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          Choose File
+        </button>
+        <input type="file" id="file-input" accept=".txt">
+        <div class="file-info" id="file-info">
+          <span class="filename" id="filename"></span>
+          <button class="clear-btn" id="clear-btn" title="Clear file">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Connection Selector -->
+      <div class="connection-selector" id="connection-selector">
+        <label for="connection-select">Select PeerConnection:</label>
+        <select id="connection-select"></select>
+      </div>
+
+      <!-- Settings Bar -->
+      <div class="settings-bar" id="settings-bar">
+        <div class="settings-group">
+          <label>Time Format:</label>
+          <div class="time-toggle" id="time-toggle">
+            <button class="time-toggle-btn active" data-format="relative">Relative</button>
+            <button class="time-toggle-btn" data-format="absolute">Absolute</button>
+          </div>
+        </div>
+        <div class="settings-group">
+          <label>Timezone:</label>
+          <span class="timezone-display" id="timezone-display"></span>
+        </div>
+        <div class="settings-group">
+          <label>All Charts:</label>
+          <div class="toggle-container">
+            <span class="toggle-label">Show All</span>
+            <div class="toggle-switch" id="global-show-all" onclick="toggleGlobalShowAll(this)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Container -->
+      <div id="charts-container">
+        
+        <!-- Summary Cards -->
+        <div class="summary-grid" id="summary-grid">
+          <div class="summary-card">
+            <div class="label">Avg RTT</div>
+            <div class="value" id="summary-rtt">--<span class="unit">ms</span></div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Avg Jitter</div>
+            <div class="value" id="summary-jitter">--<span class="unit">ms</span></div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Packet Loss</div>
+            <div class="value" id="summary-loss">--<span class="unit">%</span></div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Avg Bitrate</div>
+            <div class="value" id="summary-bitrate">--<span class="unit">kbps</span></div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Concealment</div>
+            <div class="value" id="summary-concealment">--<span class="unit">%</span></div>
+          </div>
+        </div>
+
+        <!-- RTT Chart -->
+        <div class="chart-section" id="rtt-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Round-Trip Time (RTT)</h3>
+              <span class="stat-source">candidate-pair</span>
+              <span class="data-point-count" id="rtt-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('rtt-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="rtt" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="rtt-container">
+              <div class="chart-inner">
+                <canvas id="rtt-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="thresholds">
+            <div class="threshold"><span class="threshold-dot good"></span> Good &lt;150ms</div>
+            <div class="threshold"><span class="threshold-dot moderate"></span> Moderate 150-300ms</div>
+            <div class="threshold"><span class="threshold-dot bad"></span> Poor &gt;300ms</div>
+          </div>
+          <div class="threshold-lines-legend">
+            <div class="threshold-line-item"><span class="threshold-line-sample good"></span> Good threshold line</div>
+            <div class="threshold-line-item"><span class="threshold-line-sample moderate"></span> Moderate threshold line</div>
+          </div>
+        </div>
+
+        <!-- Jitter Chart -->
+        <div class="chart-section" id="jitter-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Jitter</h3>
+              <span class="stat-source">inbound-rtp</span>
+              <span class="data-point-count" id="jitter-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('jitter-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="jitter" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="jitter-container">
+              <div class="chart-inner">
+                <canvas id="jitter-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="thresholds">
+            <div class="threshold"><span class="threshold-dot good"></span> Good &lt;20ms</div>
+            <div class="threshold"><span class="threshold-dot moderate"></span> Moderate 20-50ms</div>
+            <div class="threshold"><span class="threshold-dot bad"></span> Poor &gt;50ms</div>
+          </div>
+          <div class="threshold-lines-legend">
+            <div class="threshold-line-item"><span class="threshold-line-sample good"></span> Good threshold line</div>
+            <div class="threshold-line-item"><span class="threshold-line-sample moderate"></span> Moderate threshold line</div>
+          </div>
+        </div>
+
+        <!-- Packet Loss Chart -->
+        <div class="chart-section" id="packet-loss-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Packet Loss Rate</h3>
+              <span class="stat-source">remote-inbound-rtp</span>
+              <span class="data-point-count" id="packet-loss-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('packet-loss-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="packet-loss" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="packet-loss-container">
+              <div class="chart-inner">
+                <canvas id="packet-loss-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="thresholds">
+            <div class="threshold"><span class="threshold-dot good"></span> Good &lt;1%</div>
+            <div class="threshold"><span class="threshold-dot moderate"></span> Moderate 1-5%</div>
+            <div class="threshold"><span class="threshold-dot bad"></span> Poor &gt;5%</div>
+          </div>
+          <div class="threshold-lines-legend">
+            <div class="threshold-line-item"><span class="threshold-line-sample good"></span> Good threshold line</div>
+            <div class="threshold-line-item"><span class="threshold-line-sample moderate"></span> Moderate threshold line</div>
+          </div>
+        </div>
+
+        <!-- Inbound Bitrate Chart -->
+        <div class="chart-section" id="inbound-bitrate-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Inbound Bitrate</h3>
+              <span class="stat-source">inbound-rtp</span>
+              <span class="data-point-count" id="inbound-bitrate-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('inbound-bitrate-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="inbound-bitrate" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="inbound-bitrate-container">
+              <div class="chart-inner">
+                <canvas id="inbound-bitrate-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background: #3b82f6;"></span>
+              <span>Total</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #60a5fa;"></span>
+              <span>RTP Payload</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #a78bfa;"></span>
+              <span>RTCP</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #38bdf8;"></span>
+              <span>Headers</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Outbound Bitrate Chart -->
+        <div class="chart-section" id="outbound-bitrate-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Outbound Bitrate</h3>
+              <span class="stat-source">outbound-rtp</span>
+              <span class="data-point-count" id="outbound-bitrate-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('outbound-bitrate-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="outbound-bitrate" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="outbound-bitrate-container">
+              <div class="chart-inner">
+                <canvas id="outbound-bitrate-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background: #22c55e;"></span>
+              <span>Total</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #4ade80;"></span>
+              <span>RTP Payload</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #f472b6;"></span>
+              <span>RTCP</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #34d399;"></span>
+              <span>Headers</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #fbbf24; border-style: dashed;"></span>
+              <span>Target</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Packets Discarded Chart -->
+        <div class="chart-section" id="discarded-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Packets Discarded</h3>
+              <span class="stat-source">inbound-rtp</span>
+              <span class="data-point-count" id="discarded-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('discarded-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="discarded" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="discarded-container">
+              <div class="chart-inner">
+                <canvas id="discarded-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="thresholds">
+            <div class="threshold"><span class="threshold-dot good"></span> Good &lt;0.5%</div>
+            <div class="threshold"><span class="threshold-dot moderate"></span> Moderate 0.5-2%</div>
+            <div class="threshold"><span class="threshold-dot bad"></span> Poor &gt;2%</div>
+          </div>
+          <div class="threshold-lines-legend">
+            <div class="threshold-line-item"><span class="threshold-line-sample good"></span> Good threshold line</div>
+            <div class="threshold-line-item"><span class="threshold-line-sample moderate"></span> Moderate threshold line</div>
+          </div>
+        </div>
+
+        <!-- Jitter Buffer Delay Chart -->
+        <div class="chart-section" id="jitter-buffer-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Jitter Buffer Delay</h3>
+              <span class="stat-source">inbound-rtp</span>
+              <span class="data-point-count" id="jitter-buffer-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('jitter-buffer-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="jitter-buffer" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="jitter-buffer-container">
+              <div class="chart-inner">
+                <canvas id="jitter-buffer-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="thresholds">
+            <div class="threshold"><span class="threshold-dot good"></span> Good &lt;50ms</div>
+            <div class="threshold"><span class="threshold-dot moderate"></span> Moderate 50-150ms</div>
+            <div class="threshold"><span class="threshold-dot bad"></span> High &gt;150ms</div>
+          </div>
+          <div class="threshold-lines-legend">
+            <div class="threshold-line-item"><span class="threshold-line-sample good"></span> Good threshold line</div>
+            <div class="threshold-line-item"><span class="threshold-line-sample moderate"></span> Moderate threshold line</div>
+          </div>
+        </div>
+
+        <!-- Samples Added/Removed Chart -->
+        <div class="chart-section" id="samples-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Samples Added/Removed (Time Stretching)</h3>
+              <span class="stat-source">inbound-rtp</span>
+              <span class="data-point-count" id="samples-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('samples-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="samples" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="samples-container">
+              <div class="chart-inner">
+                <canvas id="samples-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background: #4ade80;"></span>
+              <span>Inserted (buffer growing)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #f87171;"></span>
+              <span>Removed (buffer shrinking)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Concealment Chart -->
+        <div class="chart-section" id="concealment-section">
+          <div class="chart-header">
+            <div class="chart-header-left">
+              <h3>Audio Concealment</h3>
+              <span class="stat-source">inbound-rtp</span>
+              <span class="data-point-count" id="concealment-count"></span>
+            </div>
+            <div class="chart-controls">
+              <button class="reset-zoom-btn" onclick="resetZoom('concealment-chart')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+              <div class="toggle-container">
+                <span class="toggle-label">Show All</span>
+                <div class="toggle-switch" data-chart="concealment" onclick="toggleShowAll(this)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-container" id="concealment-container">
+              <div class="chart-inner">
+                <canvas id="concealment-chart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background: #a78bfa;"></span>
+              <span>Concealed Samples</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background: #f87171;"></span>
+              <span>Silent Concealed</span>
+            </div>
+          </div>
+          <div class="thresholds" style="margin-top: 8px;">
+            <div class="threshold"><span class="threshold-dot good"></span> Good &lt;1%</div>
+            <div class="threshold"><span class="threshold-dot moderate"></span> Moderate 1-5%</div>
+            <div class="threshold"><span class="threshold-dot bad"></span> Poor &gt;5%</div>
+          </div>
+          <div class="threshold-lines-legend">
+            <div class="threshold-line-item"><span class="threshold-line-sample good"></span> Good threshold line</div>
+            <div class="threshold-line-item"><span class="threshold-line-sample moderate"></span> Moderate threshold line</div>
+          </div>
+        </div>
+
+      </div>
+
+    </article>
+
+    <footer class="doc-footer">
+      <a href="../index.html">&larr; Back to all docs</a>
+    </footer>
+  </div>
+
+  <!-- Chart.js and plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  
+  <script>
+    // Global state
+    let parsedData = null;
+    let charts = {};
+    let chartData = {}; // Store data for re-rendering
+    let chartOptions = {}; // Store options for re-rendering
+    let showAllState = {}; // Track show all state per chart
+    let timeFormat = 'relative'; // 'relative' or 'absolute'
+    let userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    // Constants
+    const VIEW_DURATION_MS = 2 * 60 * 1000; // 2 minutes visible in one view (in milliseconds)
+    const MIN_CHART_WIDTH = 100; // Minimum percentage width
+
+    // DOM Elements
+    const uploadSection = document.getElementById('upload-section');
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileInput = document.getElementById('file-input');
+    const fileInfo = document.getElementById('file-info');
+    const filename = document.getElementById('filename');
+    const clearBtn = document.getElementById('clear-btn');
+    const connectionSelector = document.getElementById('connection-selector');
+    const connectionSelect = document.getElementById('connection-select');
+    const chartsContainer = document.getElementById('charts-container');
+    const settingsBar = document.getElementById('settings-bar');
+    const timeToggle = document.getElementById('time-toggle');
+    const timezoneDisplay = document.getElementById('timezone-display');
+
+    // Initialize timezone display
+    timezoneDisplay.textContent = userTimezone;
+
+    // Chart.js default config
+    Chart.defaults.color = '#8b90a0';
+    Chart.defaults.borderColor = '#2e3345';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+
+    // Register plugins (they auto-register with Chart.js 4.x when loaded via UMD)
+    // Annotation plugin
+    if (window['chartjs-plugin-annotation']) {
+      Chart.register(window['chartjs-plugin-annotation']);
+    }
+    // Zoom plugin - uses ChartZoom global
+    if (typeof ChartZoom !== 'undefined') {
+      Chart.register(ChartZoom);
+    }
+
+    // Event Listeners
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelect);
+    clearBtn.addEventListener('click', clearFile);
+    connectionSelect.addEventListener('change', handleConnectionChange);
+
+    // Drag and drop
+    uploadSection.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadSection.classList.add('drag-over');
+    });
+    uploadSection.addEventListener('dragleave', () => {
+      uploadSection.classList.remove('drag-over');
+    });
+    uploadSection.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadSection.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.txt')) {
+        processFile(file);
+      }
+    });
+
+    // Global Show All Toggle
+    function toggleGlobalShowAll(element) {
+      const isActive = element.classList.toggle('active');
+      
+      // Update all individual toggles
+      document.querySelectorAll('.toggle-switch[data-chart]').forEach(toggle => {
+        if (isActive) {
+          toggle.classList.add('active');
+        } else {
+          toggle.classList.remove('active');
+        }
+        const chartName = toggle.dataset.chart;
+        showAllState[chartName] = isActive;
+      });
+      
+      // Re-render all charts
+      reRenderAllCharts();
+    }
+
+    // Reset Zoom
+    function resetZoom(chartId) {
+      if (charts[chartId]) {
+        charts[chartId].resetZoom();
+      }
+    }
+
+    // Time Format Toggle
+    timeToggle.addEventListener('click', (e) => {
+      if (e.target.classList.contains('time-toggle-btn')) {
+        const format = e.target.dataset.format;
+        if (format !== timeFormat) {
+          timeFormat = format;
+          // Update button states
+          timeToggle.querySelectorAll('.time-toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.format === format);
+          });
+          // Re-render all charts with new time format
+          reRenderAllCharts();
+        }
+      }
+    });
+
+    // Re-render all charts (used when time format changes)
+    function reRenderAllCharts() {
+      Object.keys(chartData).forEach(chartName => {
+        if (chartData[chartName].datasets) {
+          createMultiLineChart(
+            `${chartName}-chart`,
+            chartData[chartName].datasets,
+            chartOptions[chartName]
+          );
+        } else {
+          createChart(
+            `${chartName}-chart`,
+            chartData[chartName].data,
+            chartOptions[chartName]
+          );
+        }
+      });
+    }
+
+    // Toggle Show All
+    function toggleShowAll(element) {
+      const chartName = element.dataset.chart;
+      element.classList.toggle('active');
+      showAllState[chartName] = element.classList.contains('active');
+      
+      // Re-render the specific chart
+      if (chartData[chartName]) {
+        if (chartData[chartName].datasets) {
+          createMultiLineChart(
+            `${chartName}-chart`,
+            chartData[chartName].datasets,
+            chartOptions[chartName]
+          );
+        } else {
+          createChart(
+            `${chartName}-chart`,
+            chartData[chartName].data,
+            chartOptions[chartName]
+          );
+        }
+      }
+    }
+
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (file) {
+        processFile(file);
+      }
+    }
+
+    function processFile(file) {
+      filename.textContent = file.name;
+      fileInfo.classList.add('visible');
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          parsedData = parseWebRTCDump(e.target.result);
+          populateConnectionSelector();
+        } catch (err) {
+          console.error('Parse error:', err);
+          alert('Failed to parse the WebRTC dump file. Make sure it\'s a valid webrtc-internals dump.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function clearFile() {
+      fileInput.value = '';
+      fileInfo.classList.remove('visible');
+      connectionSelector.classList.remove('visible');
+      settingsBar.classList.remove('visible');
+      chartsContainer.classList.remove('visible');
+      parsedData = null;
+      chartData = {};
+      chartOptions = {};
+      showAllState = {};
+      destroyAllCharts();
+      
+      // Reset all toggles
+      document.querySelectorAll('.toggle-switch').forEach(toggle => {
+        toggle.classList.remove('active');
+      });
+      
+      // Reset time format toggle
+      timeFormat = 'relative';
+      timeToggle.querySelectorAll('.time-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.format === 'relative');
+      });
+    }
+
+    function parseWebRTCDump(content) {
+      const data = {
+        connections: {}
+      };
+
+      // First, try to parse as JSON (most common format from chrome://webrtc-internals)
+      try {
+        const jsonData = JSON.parse(content);
+        if (jsonData.PeerConnections) {
+          for (const [pcId, pcData] of Object.entries(jsonData.PeerConnections)) {
+            const extractedStats = extractStatsFromJSON(pcData);
+            if (Object.keys(extractedStats).length > 0) {
+              data.connections[pcId] = extractedStats;
+            }
+          }
+          if (Object.keys(data.connections).length > 0) {
+            return data;
+          }
+        }
+      } catch (e) {
+        console.log('JSON parse attempt failed, trying text format');
+      }
+
+      // Fallback: Split by peer connection (text format)
+      const lines = content.split('\n');
+      
+      let currentPC = null;
+      let currentStats = {};
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Detect PeerConnection URL
+        if (line.match(/^(https?:\/\/|file:\/\/|chrome-extension:\/\/)/)) {
+          if (currentPC && Object.keys(currentStats).length > 0) {
+            data.connections[currentPC] = currentStats;
+          }
+          currentPC = line;
+          currentStats = {};
+          continue;
+        }
+
+        // Parse stats entries
+        if (currentPC && line.includes('[') && line.includes(']')) {
+          const match = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*)/);
+          if (match) {
+            const statName = match[1];
+            const valueMatches = [...line.matchAll(/\[([0-9.]+),\s*([0-9.eE+-]+)\]/g)];
+            if (valueMatches.length > 0) {
+              currentStats[statName] = valueMatches.map(m => ({
+                timestamp: parseFloat(m[1]),
+                value: parseFloat(m[2])
+              }));
+            }
+          }
+        }
+      }
+
+      // Save last connection
+      if (currentPC && Object.keys(currentStats).length > 0) {
+        data.connections[currentPC] = currentStats;
+      }
+
+      // Alternative parsing for different dump formats
+      if (Object.keys(data.connections).length === 0) {
+        data.connections = parseAlternativeFormat(content);
+      }
+
+      return data;
+    }
+
+    function parseAlternativeFormat(content) {
+      const connections = {};
+      
+      try {
+        const jsonData = JSON.parse(content);
+        if (jsonData.PeerConnections) {
+          for (const [pcId, pcData] of Object.entries(jsonData.PeerConnections)) {
+            const extractedStats = extractStatsFromJSON(pcData);
+            if (Object.keys(extractedStats).length > 0) {
+              connections[pcId] = extractedStats;
+            }
+          }
+        }
+        return connections;
+      } catch (e) {
+        // Continue with text parsing
+      }
+      
+      // Fallback: parse line by line
+      const lines = content.split('\n');
+      const stats = {};
+
+      for (const line of lines) {
+        const kvMatch = line.match(/^([a-zA-Z][a-zA-Z0-9_]*)\s*[:=]\s*([0-9.eE+-]+)/);
+        if (kvMatch) {
+          const [, key, value] = kvMatch;
+          if (!stats[key]) stats[key] = [];
+          stats[key].push({
+            timestamp: Date.now() + stats[key].length * 1000,
+            value: parseFloat(value)
+          });
+        }
+      }
+
+      if (Object.keys(stats).length > 0) {
+        connections['PeerConnection'] = stats;
+      }
+
+      return connections;
+    }
+
+    function extractStatsFromJSON(pcData) {
+      const stats = {};
+      
+      if (!pcData.stats) return stats;
+      
+      for (const [statId, statData] of Object.entries(pcData.stats)) {
+        const dashIndex = statId.lastIndexOf('-');
+        if (dashIndex === -1) continue;
+        
+        const metricName = statId.substring(dashIndex + 1);
+        const statsType = statData.statsType || '';
+        
+        let values = [];
+        if (statData.values) {
+          try {
+            values = JSON.parse(statData.values);
+          } catch (e) {
+            const matches = statData.values.match(/[\d.eE+-]+/g);
+            if (matches) {
+              values = matches.map(v => parseFloat(v));
+            }
+          }
+        }
+        
+        if (!Array.isArray(values) || values.length === 0) continue;
+        
+        const startTime = statData.startTime ? new Date(statData.startTime).getTime() : Date.now();
+        const endTime = statData.endTime ? new Date(statData.endTime).getTime() : startTime + values.length * 1000;
+        const interval = values.length > 1 ? (endTime - startTime) / (values.length - 1) : 1000;
+        
+        const fullKey = `${statsType}_${metricName}`;
+        
+        const numericValues = values.filter(v => typeof v === 'number' || !isNaN(parseFloat(v)));
+        if (numericValues.length === 0) continue;
+        
+        if (stats[fullKey] && stats[fullKey].length >= numericValues.length) continue;
+        
+        stats[fullKey] = numericValues.map((v, i) => ({
+          timestamp: startTime + i * interval,
+          value: typeof v === 'number' ? v : parseFloat(v) || 0
+        }));
+      }
+      
+      return stats;
+    }
+
+    function populateConnectionSelector() {
+      connectionSelect.innerHTML = '';
+      
+      const connections = Object.keys(parsedData.connections);
+      
+      if (connections.length === 0) {
+        alert('No peer connections found in the dump file.');
+        return;
+      }
+
+      connections.forEach((pc) => {
+        const option = document.createElement('option');
+        option.value = pc;
+        option.textContent = pc.length > 60 ? pc.substring(0, 60) + '...' : pc;
+        connectionSelect.appendChild(option);
+      });
+
+      connectionSelector.classList.add('visible');
+      handleConnectionChange();
+    }
+
+    function handleConnectionChange() {
+      const selectedPC = connectionSelect.value;
+      if (!selectedPC || !parsedData.connections[selectedPC]) return;
+
+      settingsBar.classList.add('visible');
+      chartsContainer.classList.add('visible');
+      renderCharts(parsedData.connections[selectedPC]);
+    }
+
+    function destroyAllCharts() {
+      Object.values(charts).forEach(chart => {
+        if (chart) chart.destroy();
+      });
+      charts = {};
+    }
+
+    function findStatData(stats, ...possibleNames) {
+      for (const name of possibleNames) {
+        if (stats[name]) return stats[name];
+        
+        for (const key of Object.keys(stats)) {
+          const parts = key.split('_');
+          const metricName = parts[parts.length - 1];
+          if (metricName.toLowerCase() === name.toLowerCase()) {
+            return stats[key];
+          }
+        }
+        
+        for (const key of Object.keys(stats)) {
+          if (key.toLowerCase().includes(name.toLowerCase())) {
+            return stats[key];
+          }
+        }
+      }
+      return null;
+    }
+
+    function calculateDeltas(data) {
+      if (!data || data.length < 2) return [];
+      
+      const deltas = [];
+      for (let i = 1; i < data.length; i++) {
+        const dt = (data[i].timestamp - data[i-1].timestamp) / 1000;
+        if (dt > 0) {
+          deltas.push({
+            timestamp: data[i].timestamp,
+            value: (data[i].value - data[i-1].value) / dt
+          });
+        }
+      }
+      return deltas;
+    }
+
+    function calculateBitrate(bytesData) {
+      const deltas = calculateDeltas(bytesData);
+      return deltas.map(d => ({
+        timestamp: d.timestamp,
+        value: (d.value * 8) / 1000
+      }));
+    }
+
+    function formatTimestamp(ts, startTs) {
+      if (timeFormat === 'absolute') {
+        // Absolute time in user's timezone
+        const date = new Date(ts);
+        return date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZone: userTimezone
+        });
+      } else {
+        // Relative time from start
+        const seconds = Math.floor((ts - startTs) / 1000);
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+      }
+    }
+
+    function getChartName(canvasId) {
+      return canvasId.replace('-chart', '');
+    }
+
+    function createChart(canvasId, data, options = {}) {
+      const chartName = getChartName(canvasId);
+      const container = document.getElementById(`${chartName}-container`);
+      const countEl = document.getElementById(`${chartName}-count`);
+      
+      if (!container) return null;
+
+      // Store data for re-rendering
+      chartData[chartName] = { data };
+      chartOptions[chartName] = options;
+
+      // Update data point count
+      if (countEl) {
+        countEl.textContent = data ? `${data.length} points` : '';
+      }
+
+      // Restore canvas
+      const chartInner = container.querySelector('.chart-inner') || container;
+      chartInner.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+      const canvas = document.getElementById(canvasId);
+
+      if (charts[canvasId]) {
+        charts[canvasId].destroy();
+        delete charts[canvasId];
+      }
+
+      if (!data || data.length === 0) {
+        chartInner.innerHTML = '<div class="no-data">No data available for this metric</div>';
+        return null;
+      }
+
+      const showAll = showAllState[chartName] || false;
+      const dataPoints = data.length;
+      
+      // Calculate total duration of the data
+      const startTs = data[0].timestamp;
+      const endTs = data[data.length - 1].timestamp;
+      const totalDuration = endTs - startTs;
+      
+      // Calculate width based on mode
+      if (showAll) {
+        container.classList.remove('scrollable');
+        chartInner.style.width = '100%';
+      } else {
+        // Show 2 minutes per view width, scroll if longer
+        if (totalDuration > VIEW_DURATION_MS) {
+          const widthPercent = (totalDuration / VIEW_DURATION_MS) * 100;
+          container.classList.add('scrollable');
+          chartInner.style.width = `${widthPercent}%`;
+        } else {
+          container.classList.remove('scrollable');
+          chartInner.style.width = '100%';
+        }
+      }
+
+      const ctx = canvas.getContext('2d');
+      const labels = data.map(d => formatTimestamp(d.timestamp, startTs));
+      const values = data.map(d => d.value);
+      const thresholds = options.thresholds || null;
+
+      // Build annotations for threshold lines
+      const annotations = {};
+      if (thresholds) {
+        annotations.goodLine = {
+          type: 'line',
+          yMin: thresholds.good,
+          yMax: thresholds.good,
+          borderColor: '#4ade80',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          label: {
+            display: false
+          }
+        };
+        annotations.moderateLine = {
+          type: 'line',
+          yMin: thresholds.moderate,
+          yMax: thresholds.moderate,
+          borderColor: '#fbbf24',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          label: {
+            display: false
+          }
+        };
+      }
+
+      // Generate point colors based on thresholds
+      const getPointColor = (value) => {
+        if (!thresholds) return options.color || '#6c9cfc';
+        if (value <= thresholds.good) return '#4ade80'; // Green
+        if (value <= thresholds.moderate) return '#fbbf24'; // Orange
+        return '#f87171'; // Red
+      };
+      const pointColors = values.map(v => getPointColor(v));
+
+      const chartConfig = {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            borderColor: options.color || '#6c9cfc',
+            backgroundColor: (options.color || '#6c9cfc') + '20',
+            fill: true,
+            borderWidth: 2,
+            pointRadius: showAll ? 0 : 3,
+            pointHoverRadius: showAll ? 0 : 6,
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointColors,
+            pointBorderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1a1d27',
+              borderColor: '#2e3345',
+              borderWidth: 1,
+              titleColor: '#e1e4ed',
+              bodyColor: '#e1e4ed',
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  const value = context.parsed.y;
+                  const unit = options.unit || '';
+                  let status = '';
+                  if (thresholds) {
+                    if (value <= thresholds.good) status = ' (Good)';
+                    else if (value <= thresholds.moderate) status = ' (Moderate)';
+                    else status = ' (Poor)';
+                  }
+                  return `${value.toFixed(2)}${unit}${status}`;
+                }
+              }
+            },
+            annotation: {
+              annotations
+            },
+            zoom: {
+              pan: {
+                enabled: true,
+                mode: 'x'
+              },
+              zoom: {
+                wheel: {
+                  enabled: true
+                },
+                pinch: {
+                  enabled: true
+                },
+                drag: {
+                  enabled: true,
+                  backgroundColor: 'rgba(108, 156, 252, 0.2)',
+                  borderColor: '#6c9cfc',
+                  borderWidth: 1
+                },
+                mode: 'x'
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#2e3345', drawBorder: false },
+              ticks: { maxTicksLimit: showAll ? 10 : 20 }
+            },
+            y: {
+              grid: { color: '#2e3345', drawBorder: false },
+              beginAtZero: true
+            }
+          },
+          elements: {
+            line: { tension: 0.2 }
+          }
+        }
+      };
+
+      charts[canvasId] = new Chart(ctx, chartConfig);
+      return charts[canvasId];
+    }
+
+    function createMultiLineChart(canvasId, datasets, options = {}) {
+      const chartName = getChartName(canvasId);
+      const container = document.getElementById(`${chartName}-container`);
+      const countEl = document.getElementById(`${chartName}-count`);
+      
+      if (!container) return null;
+
+      // Store data for re-rendering
+      chartData[chartName] = { datasets };
+      chartOptions[chartName] = options;
+
+      const chartInner = container.querySelector('.chart-inner') || container;
+      chartInner.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+      const canvas = document.getElementById(canvasId);
+
+      if (charts[canvasId]) {
+        charts[canvasId].destroy();
+        delete charts[canvasId];
+      }
+
+      const hasData = datasets.some(ds => ds.data && ds.data.length > 0);
+      if (!hasData) {
+        chartInner.innerHTML = '<div class="no-data">No data available for this metric</div>';
+        if (countEl) countEl.textContent = '';
+        return null;
+      }
+
+      const primaryDataset = datasets.reduce((a, b) => 
+        (a.data?.length || 0) > (b.data?.length || 0) ? a : b
+      );
+
+      // Update data point count
+      if (countEl) {
+        countEl.textContent = `${primaryDataset.data.length} points`;
+      }
+
+      const showAll = showAllState[chartName] || false;
+      
+      // Calculate total duration of the data
+      const startTs = primaryDataset.data[0]?.timestamp || 0;
+      const endTs = primaryDataset.data[primaryDataset.data.length - 1]?.timestamp || 0;
+      const totalDuration = endTs - startTs;
+      
+      if (showAll) {
+        container.classList.remove('scrollable');
+        chartInner.style.width = '100%';
+      } else {
+        // Show 2 minutes per view width, scroll if longer
+        if (totalDuration > VIEW_DURATION_MS) {
+          const widthPercent = (totalDuration / VIEW_DURATION_MS) * 100;
+          container.classList.add('scrollable');
+          chartInner.style.width = `${widthPercent}%`;
+        } else {
+          container.classList.remove('scrollable');
+          chartInner.style.width = '100%';
+        }
+      }
+
+      const ctx = canvas.getContext('2d');
+      const labels = primaryDataset.data.map(d => formatTimestamp(d.timestamp, startTs));
+
+      // Build annotations for threshold lines (use first dataset's thresholds)
+      const annotations = {};
+      const firstThresholds = datasets.find(ds => ds.thresholds)?.thresholds;
+      if (firstThresholds) {
+        annotations.goodLine = {
+          type: 'line',
+          yMin: firstThresholds.good,
+          yMax: firstThresholds.good,
+          borderColor: '#4ade80',
+          borderWidth: 2,
+          borderDash: [6, 4]
+        };
+        annotations.moderateLine = {
+          type: 'line',
+          yMin: firstThresholds.moderate,
+          yMax: firstThresholds.moderate,
+          borderColor: '#fbbf24',
+          borderWidth: 2,
+          borderDash: [6, 4]
+        };
+      }
+
+      // Generate point colors based on thresholds
+      // higherIsBetter: true for metrics like bitrate where higher values are good
+      const getPointColor = (value, thresholds, higherIsBetter = false) => {
+        if (!thresholds) return null;
+        if (higherIsBetter) {
+          // For bitrate: higher is better
+          if (value >= thresholds.good) return '#4ade80'; // Green
+          if (value >= thresholds.moderate) return '#fbbf24'; // Orange
+          return '#f87171'; // Red
+        } else {
+          // For jitter, RTT, loss: lower is better
+          if (value <= thresholds.good) return '#4ade80'; // Green
+          if (value <= thresholds.moderate) return '#fbbf24'; // Orange
+          return '#f87171'; // Red
+        }
+      };
+
+      const chartDatasets = datasets.map(ds => {
+        const values = ds.data?.map(d => d.value) || [];
+        const pointColors = ds.thresholds 
+          ? values.map(v => getPointColor(v, ds.thresholds, ds.higherIsBetter))
+          : ds.color;
+        return {
+          label: ds.label,
+          data: values,
+          borderColor: ds.color,
+          backgroundColor: ds.color + '20',
+          fill: ds.fill !== false,
+          borderWidth: 2,
+          borderDash: ds.dashed ? [5, 5] : [],
+          pointRadius: showAll ? 0 : 3,
+          pointHoverRadius: showAll ? 0 : 6,
+          pointBackgroundColor: pointColors,
+          pointBorderColor: pointColors,
+          pointBorderWidth: 1
+        };
+      });
+
+      charts[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: chartDatasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1a1d27',
+              borderColor: '#2e3345',
+              borderWidth: 1,
+              titleColor: '#e1e4ed',
+              bodyColor: '#e1e4ed',
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  const ds = datasets[context.datasetIndex];
+                  const value = context.parsed.y;
+                  const unit = ds.unit || '';
+                  let status = '';
+                  if (ds.thresholds) {
+                    if (ds.higherIsBetter) {
+                      // For bitrate: higher is better
+                      if (value >= ds.thresholds.good) status = ' (Good)';
+                      else if (value >= ds.thresholds.moderate) status = ' (Moderate)';
+                      else status = ' (Poor)';
+                    } else {
+                      // For jitter, loss: lower is better
+                      if (value <= ds.thresholds.good) status = ' (Good)';
+                      else if (value <= ds.thresholds.moderate) status = ' (Moderate)';
+                      else status = ' (Poor)';
+                    }
+                  }
+                  return `${ds.label}: ${value.toFixed(2)}${unit}${status}`;
+                }
+              }
+            },
+            annotation: {
+              annotations
+            },
+            zoom: {
+              pan: {
+                enabled: true,
+                mode: 'x'
+              },
+              zoom: {
+                wheel: {
+                  enabled: true
+                },
+                pinch: {
+                  enabled: true
+                },
+                drag: {
+                  enabled: true,
+                  backgroundColor: 'rgba(108, 156, 252, 0.2)',
+                  borderColor: '#6c9cfc',
+                  borderWidth: 1
+                },
+                mode: 'x'
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#2e3345', drawBorder: false },
+              ticks: { maxTicksLimit: showAll ? 10 : 20 }
+            },
+            y: {
+              grid: { color: '#2e3345', drawBorder: false },
+              beginAtZero: true
+            }
+          },
+          elements: {
+            line: { tension: 0.2 }
+          }
+        }
+      });
+
+      return charts[canvasId];
+    }
+
+    function renderCharts(stats) {
+      destroyAllCharts();
+      chartData = {};
+      chartOptions = {};
+
+      // RTT
+      const rttData = findStatData(stats, 'currentRoundTripTime', 'roundTripTime', 'rtt');
+      const rttMs = rttData?.map(d => ({ timestamp: d.timestamp, value: d.value * 1000 }));
+      createChart('rtt-chart', rttMs, { 
+        color: '#6c9cfc',
+        unit: 'ms',
+        thresholds: { good: 150, moderate: 300 }
+      });
+
+      // Jitter
+      const jitterData = findStatData(stats, 'jitter');
+      const jitterMs = jitterData?.map(d => ({ timestamp: d.timestamp, value: d.value * 1000 }));
+      createChart('jitter-chart', jitterMs, { 
+        color: '#a78bfa',
+        unit: 'ms',
+        thresholds: { good: 20, moderate: 50 }
+      });
+
+      // Packet Loss
+      const packetsLost = findStatData(stats, 'packetsLost');
+      const packetsSent = findStatData(stats, 'packetsSent', 'packetsReceived');
+      let lossRate = [];
+      if (packetsLost && packetsSent) {
+        const lostDeltas = calculateDeltas(packetsLost);
+        const sentDeltas = calculateDeltas(packetsSent);
+        const minLen = Math.min(lostDeltas.length, sentDeltas.length);
+        for (let i = 0; i < minLen; i++) {
+          if (sentDeltas[i].value > 0) {
+            lossRate.push({
+              timestamp: lostDeltas[i].timestamp,
+              value: Math.max(0, (lostDeltas[i].value / sentDeltas[i].value) * 100)
+            });
+          }
+        }
+      }
+      createChart('packet-loss-chart', lossRate, { 
+        color: '#f87171',
+        unit: '%',
+        thresholds: { good: 1, moderate: 5 }
+      });
+
+      // Inbound Bitrate breakdown
+      const bytesReceived = findStatData(stats, 'bytesReceived');
+      const headerBytesReceived = findStatData(stats, 'headerBytesReceived');
+      const rtcpBytesReceived = findStatData(stats, 'rtcpBytesReceived');
+      
+      const inboundRtpPayload = bytesReceived ? calculateBitrate(bytesReceived) : [];
+      const inboundHeaderBytes = headerBytesReceived ? calculateBitrate(headerBytesReceived) : [];
+      const inboundRtcp = rtcpBytesReceived ? calculateBitrate(rtcpBytesReceived) : [];
+      
+      // Calculate total inbound transport bitrate
+      let inboundTotalTransport = [];
+      if (inboundRtpPayload.length > 0) {
+        for (let i = 0; i < inboundRtpPayload.length; i++) {
+          const rtpVal = inboundRtpPayload[i]?.value || 0;
+          const headerVal = inboundHeaderBytes[i]?.value || 0;
+          const rtcpVal = inboundRtcp[i]?.value || 0;
+          inboundTotalTransport.push({
+            timestamp: inboundRtpPayload[i].timestamp,
+            value: rtpVal + headerVal + rtcpVal
+          });
+        }
+      }
+      
+      // Inbound Bitrate Chart - Blue shades with purple for RTCP
+      const inboundBitrateDatasets = [
+        { label: 'Total', data: inboundTotalTransport, color: '#3b82f6', unit: ' kbps' },
+        { label: 'RTP Payload', data: inboundRtpPayload, color: '#60a5fa', unit: ' kbps' },
+        { label: 'RTCP', data: inboundRtcp, color: '#a78bfa', unit: ' kbps' },
+        { label: 'Headers', data: inboundHeaderBytes, color: '#38bdf8', unit: ' kbps' }
+      ].filter(ds => ds.data && ds.data.length > 0);
+      
+      createMultiLineChart('inbound-bitrate-chart', inboundBitrateDatasets);
+      
+      // Outbound Bitrate breakdown
+      const bytesSent = findStatData(stats, 'bytesSent');
+      const headerBytesSent = findStatData(stats, 'headerBytesSent');
+      const rtcpBytesSent = findStatData(stats, 'rtcpBytesSent');
+      const targetBitrateData = findStatData(stats, 'targetBitrate');
+      
+      const outboundRtpPayload = bytesSent ? calculateBitrate(bytesSent) : [];
+      const outboundHeaderBytes = headerBytesSent ? calculateBitrate(headerBytesSent) : [];
+      const outboundRtcp = rtcpBytesSent ? calculateBitrate(rtcpBytesSent) : [];
+      
+      // Calculate total outbound transport bitrate
+      let outboundTotalTransport = [];
+      if (outboundRtpPayload.length > 0) {
+        for (let i = 0; i < outboundRtpPayload.length; i++) {
+          const rtpVal = outboundRtpPayload[i]?.value || 0;
+          const headerVal = outboundHeaderBytes[i]?.value || 0;
+          const rtcpVal = outboundRtcp[i]?.value || 0;
+          outboundTotalTransport.push({
+            timestamp: outboundRtpPayload[i].timestamp,
+            value: rtpVal + headerVal + rtcpVal
+          });
+        }
+      }
+      
+      // Convert target bitrate from bps to kbps
+      const targetBitrateKbps = targetBitrateData?.map(d => ({ 
+        timestamp: d.timestamp, 
+        value: d.value / 1000 
+      })) || [];
+      
+      // Outbound Bitrate Chart - Green shades with pink for RTCP
+      const outboundBitrateDatasets = [
+        { label: 'Total', data: outboundTotalTransport, color: '#22c55e', unit: ' kbps' },
+        { label: 'RTP Payload', data: outboundRtpPayload, color: '#4ade80', unit: ' kbps' },
+        { label: 'RTCP', data: outboundRtcp, color: '#f472b6', unit: ' kbps' },
+        { label: 'Headers', data: outboundHeaderBytes, color: '#34d399', unit: ' kbps' }
+      ];
+      
+      // Add target bitrate line if available
+      if (targetBitrateKbps.length > 0) {
+        outboundBitrateDatasets.push({ 
+          label: 'Target', 
+          data: targetBitrateKbps, 
+          color: '#fbbf24', 
+          unit: ' kbps',
+          dashed: true,
+          fill: false
+        });
+      }
+      
+      const filteredOutboundDatasets = outboundBitrateDatasets.filter(ds => ds.data && ds.data.length > 0);
+      createMultiLineChart('outbound-bitrate-chart', filteredOutboundDatasets);
+
+      // Packets Discarded
+      const packetsDiscarded = findStatData(stats, 'packetsDiscarded');
+      const packetsRecv = findStatData(stats, 'packetsReceived');
+      let discardRate = [];
+      if (packetsDiscarded && packetsRecv) {
+        const discardDeltas = calculateDeltas(packetsDiscarded);
+        const recvDeltas = calculateDeltas(packetsRecv);
+        const minLen = Math.min(discardDeltas.length, recvDeltas.length);
+        for (let i = 0; i < minLen; i++) {
+          if (recvDeltas[i].value > 0) {
+            discardRate.push({
+              timestamp: discardDeltas[i].timestamp,
+              value: Math.max(0, (discardDeltas[i].value / recvDeltas[i].value) * 100)
+            });
+          }
+        }
+      }
+      createChart('discarded-chart', discardRate, { 
+        color: '#fbbf24',
+        unit: '%',
+        thresholds: { good: 0.5, moderate: 2 }
+      });
+
+      // Jitter Buffer Delay
+      const jbDelay = findStatData(stats, 'jitterBufferDelay');
+      const jbEmitted = findStatData(stats, 'jitterBufferEmittedCount');
+      let bufferDelay = [];
+      if (jbDelay && jbEmitted) {
+        const delayDeltas = calculateDeltas(jbDelay);
+        const emittedDeltas = calculateDeltas(jbEmitted);
+        const minLen = Math.min(delayDeltas.length, emittedDeltas.length);
+        for (let i = 0; i < minLen; i++) {
+          if (emittedDeltas[i].value > 0) {
+            bufferDelay.push({
+              timestamp: delayDeltas[i].timestamp,
+              value: (delayDeltas[i].value / emittedDeltas[i].value) * 1000
+            });
+          }
+        }
+      }
+      createChart('jitter-buffer-chart', bufferDelay, { 
+        color: '#6c9cfc',
+        unit: 'ms',
+        thresholds: { good: 50, moderate: 150 }
+      });
+
+      // Samples Added/Removed
+      const insertedSamples = findStatData(stats, 'insertedSamplesForDeceleration');
+      const removedSamples = findStatData(stats, 'removedSamplesForAcceleration');
+      const insertedDeltas = insertedSamples ? calculateDeltas(insertedSamples) : [];
+      const removedDeltas = removedSamples ? calculateDeltas(removedSamples).map(d => ({
+        timestamp: d.timestamp,
+        value: -d.value
+      })) : [];
+      createMultiLineChart('samples-chart', [
+        { label: 'Inserted', data: insertedDeltas, color: '#4ade80', unit: ' samples/s' },
+        { label: 'Removed', data: removedDeltas, color: '#f87171', unit: ' samples/s' }
+      ]);
+
+      // Concealment
+      const concealedSamples = findStatData(stats, 'concealedSamples');
+      const silentConcealed = findStatData(stats, 'silentConcealedSamples');
+      const totalSamples = findStatData(stats, 'totalSamplesReceived');
+      
+      let concealmentRate = [];
+      let silentRate = [];
+      
+      if (concealedSamples && totalSamples) {
+        const concealedDeltas = calculateDeltas(concealedSamples);
+        const totalDeltas = calculateDeltas(totalSamples);
+        const minLen = Math.min(concealedDeltas.length, totalDeltas.length);
+        for (let i = 0; i < minLen; i++) {
+          if (totalDeltas[i].value > 0) {
+            concealmentRate.push({
+              timestamp: concealedDeltas[i].timestamp,
+              value: (concealedDeltas[i].value / totalDeltas[i].value) * 100
+            });
+          }
+        }
+      }
+      
+      if (silentConcealed && totalSamples) {
+        const silentDeltas = calculateDeltas(silentConcealed);
+        const totalDeltas = calculateDeltas(totalSamples);
+        const minLen = Math.min(silentDeltas.length, totalDeltas.length);
+        for (let i = 0; i < minLen; i++) {
+          if (totalDeltas[i].value > 0) {
+            silentRate.push({
+              timestamp: silentDeltas[i].timestamp,
+              value: (silentDeltas[i].value / totalDeltas[i].value) * 100
+            });
+          }
+        }
+      }
+      
+      createMultiLineChart('concealment-chart', [
+        { label: 'Concealed', data: concealmentRate, color: '#a78bfa', unit: '%', thresholds: { good: 1, moderate: 5 } },
+        { label: 'Silent', data: silentRate, color: '#f87171', dashed: true, unit: '%', thresholds: { good: 1, moderate: 5 } }
+      ]);
+
+      // Update summary cards
+      updateSummary(stats, rttMs, jitterMs, lossRate, inboundRtpPayload, concealmentRate);
+    }
+
+    function updateSummary(stats, rttMs, jitterMs, lossRate, bitrate, concealment) {
+      const avg = (arr) => arr && arr.length > 0 
+        ? arr.reduce((a, b) => a + b.value, 0) / arr.length 
+        : null;
+
+      const avgRtt = avg(rttMs);
+      const avgJitter = avg(jitterMs);
+      const avgLoss = avg(lossRate);
+      const avgBitrate = avg(bitrate);
+      const avgConcealment = avg(concealment);
+
+      const rttEl = document.getElementById('summary-rtt');
+      if (avgRtt !== null) {
+        rttEl.innerHTML = `${avgRtt.toFixed(1)}<span class="unit">ms</span>`;
+        rttEl.className = 'value ' + (avgRtt < 150 ? 'good' : avgRtt < 300 ? 'moderate' : 'bad');
+      }
+
+      const jitterEl = document.getElementById('summary-jitter');
+      if (avgJitter !== null) {
+        jitterEl.innerHTML = `${avgJitter.toFixed(1)}<span class="unit">ms</span>`;
+        jitterEl.className = 'value ' + (avgJitter < 20 ? 'good' : avgJitter < 50 ? 'moderate' : 'bad');
+      }
+
+      const lossEl = document.getElementById('summary-loss');
+      if (avgLoss !== null) {
+        lossEl.innerHTML = `${avgLoss.toFixed(2)}<span class="unit">%</span>`;
+        lossEl.className = 'value ' + (avgLoss < 1 ? 'good' : avgLoss < 5 ? 'moderate' : 'bad');
+      }
+
+      const bitrateEl = document.getElementById('summary-bitrate');
+      if (avgBitrate !== null) {
+        bitrateEl.innerHTML = `${avgBitrate.toFixed(1)}<span class="unit">kbps</span>`;
+        bitrateEl.className = 'value';
+      }
+
+      const concealEl = document.getElementById('summary-concealment');
+      if (avgConcealment !== null) {
+        concealEl.innerHTML = `${avgConcealment.toFixed(2)}<span class="unit">%</span>`;
+        concealEl.className = 'value ' + (avgConcealment < 1 ? 'good' : avgConcealment < 5 ? 'moderate' : 'bad');
+      }
+    }
+  </script>
+
+</body>
+</html>
