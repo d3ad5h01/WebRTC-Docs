@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Send Pipeline &mdash; WebRTC Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+    .diagram svg {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      height: auto;
+    }
+    .diagram-caption {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+      font-style: italic;
+    }
+    .component-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 16px 0;
+    }
+    .component-card h4 {
+      color: var(--accent);
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .component-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .key-point {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: var(--accent-dim);
+      border-radius: var(--radius);
+      margin: 16px 0;
+    }
+    .key-point-icon {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .key-point p {
+      margin: 0;
+      color: var(--text);
+    }
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .processing-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 16px 0;
+    }
+    .processing-card h4 {
+      color: #4ade80;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+    .processing-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="doc-header">
+      <a href="../index.html">&larr; Back to all docs</a>
+      <h1>Audio Send Pipeline</h1>
+      <p class="subtitle">Outbound audio flow &mdash; from microphone to network</p>
+    </header>
+
+    <article class="doc-content">
+
+      <!-- ============================================ -->
+      <!-- SECTION: Pipeline Overview -->
+      <!-- ============================================ -->
+      <h2>Pipeline Overview</h2>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#128161;</span>
+        <p><strong>Flow:</strong> Microphone → Audio Processing → Encoder → Pacer → Network</p>
+      </div>
+
+      <div class="diagram">
+        <svg viewBox="0 0 850 200" xmlns="http://www.w3.org/2000/svg">
+          <text x="425" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">Microphone → Audio Processing → Encoder → Pacer → Network</text>
+          
+          <!-- Microphone -->
+          <rect x="30" y="70" width="100" height="80" rx="8" fill="#242836" stroke="#4ade80" stroke-width="2"/>
+          <text x="80" y="95" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Microphone</text>
+          <text x="80" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">(capture)</text>
+          <text x="80" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">Raw PCM</text>
+          
+          <!-- Arrow -->
+          <path d="M130 110 L170 110" stroke="#4ade80" stroke-width="2" marker-end="url(#arr1)"/>
+          
+          <!-- Audio Processing -->
+          <rect x="175" y="70" width="120" height="80" rx="8" fill="#242836" stroke="#4ade80" stroke-width="2"/>
+          <text x="235" y="95" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Audio Proc</text>
+          <text x="235" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">AEC, NS, AGC</text>
+          <text x="235" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">(clean up)</text>
+          
+          <!-- Arrow -->
+          <path d="M295 110 L345 110" stroke="#4ade80" stroke-width="2" marker-end="url(#arr1)"/>
+          
+          <!-- Encoder -->
+          <rect x="350" y="70" width="120" height="80" rx="8" fill="#242836" stroke="#fbbf24" stroke-width="2"/>
+          <text x="410" y="95" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="500">Encoder</text>
+          <text x="410" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">PCM → Opus</text>
+          <text x="410" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">(compress)</text>
+          
+          <!-- Arrow -->
+          <path d="M470 110 L510 110" stroke="#4ade80" stroke-width="2" marker-end="url(#arr1)"/>
+          
+          <!-- Pacer -->
+          <rect x="515" y="70" width="120" height="80" rx="8" fill="#242836" stroke="#a78bfa" stroke-width="2"/>
+          <text x="575" y="95" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="500">Pacer</text>
+          <text x="575" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">Smooth send</text>
+          <text x="575" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">(no bursts)</text>
+          
+          <!-- Arrow -->
+          <path d="M635 110 L675 110" stroke="#4ade80" stroke-width="2" marker-end="url(#arr1)"/>
+          
+          <!-- Network -->
+          <rect x="680" y="70" width="100" height="80" rx="8" fill="#242836" stroke="#8b90a0" stroke-width="2"/>
+          <text x="730" y="95" text-anchor="middle" fill="#8b90a0" font-size="10" font-weight="500">Network</text>
+          <text x="730" y="115" text-anchor="middle" fill="#8b90a0" font-size="9">(packets)</text>
+          <text x="730" y="135" text-anchor="middle" fill="#8b90a0" font-size="8">→ Receiver</text>
+          
+          <!-- Data format labels -->
+          <text x="80" y="170" text-anchor="middle" fill="#4ade80" font-size="9">PCM</text>
+          <text x="235" y="170" text-anchor="middle" fill="#4ade80" font-size="9">PCM</text>
+          <text x="410" y="170" text-anchor="middle" fill="#fbbf24" font-size="9">Opus</text>
+          <text x="575" y="170" text-anchor="middle" fill="#a78bfa" font-size="9">Opus</text>
+          <text x="730" y="170" text-anchor="middle" fill="#8b90a0" font-size="9">Opus</text>
+          
+          <defs>
+            <marker id="arr1" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4ade80"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">Data flows left to right: raw audio gets processed, compressed, and sent</p>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Each Component -->
+      <!-- ============================================ -->
+      <h2>Each Component</h2>
+
+      <div class="component-grid">
+        <div class="component-card">
+          <h4>1. Microphone (Capture)</h4>
+          <p>Captures raw audio from hardware. Outputs PCM samples at 48kHz.</p>
+        </div>
+        <div class="component-card">
+          <h4>2. Audio Processing</h4>
+          <p>Cleans up audio: removes echo, suppresses noise, adjusts gain.</p>
+        </div>
+        <div class="component-card">
+          <h4>3. Encoder</h4>
+          <p>Compresses PCM → Opus. Reduces ~768 kbps to ~32 kbps.</p>
+        </div>
+        <div class="component-card">
+          <h4>4. Pacer</h4>
+          <p>Sends packets at steady rate. Prevents network congestion from bursts.</p>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Audio Processing Details -->
+      <!-- ============================================ -->
+      <h2>Audio Processing (APM)</h2>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#128161;</span>
+        <p><strong>APM = Audio Processing Module</strong> &mdash; WebRTC's built-in audio cleanup pipeline.</p>
+      </div>
+
+      <div class="diagram">
+        <svg viewBox="0 0 800 280" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">Audio Processing Module (APM)</text>
+          
+          <!-- Input -->
+          <rect x="50" y="100" width="80" height="60" rx="8" fill="#242836" stroke="#4ade80" stroke-width="2"/>
+          <text x="90" y="125" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Raw</text>
+          <text x="90" y="140" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Audio</text>
+          
+          <!-- Arrow -->
+          <path d="M130 130 L170 130" stroke="#4ade80" stroke-width="2" marker-end="url(#arr2)"/>
+          
+          <!-- AEC -->
+          <rect x="175" y="100" width="120" height="60" rx="8" fill="#242836" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="235" y="125" text-anchor="middle" fill="#6c9cfc" font-size="10" font-weight="500">AEC</text>
+          <text x="235" y="140" text-anchor="middle" fill="#8b90a0" font-size="8">Echo Cancel</text>
+          
+          <!-- Arrow -->
+          <path d="M295 130 L335 130" stroke="#4ade80" stroke-width="2" marker-end="url(#arr2)"/>
+          
+          <!-- NS -->
+          <rect x="340" y="100" width="120" height="60" rx="8" fill="#242836" stroke="#fbbf24" stroke-width="2"/>
+          <text x="400" y="125" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="500">NS</text>
+          <text x="400" y="140" text-anchor="middle" fill="#8b90a0" font-size="8">Noise Suppress</text>
+          
+          <!-- Arrow -->
+          <path d="M460 130 L500 130" stroke="#4ade80" stroke-width="2" marker-end="url(#arr2)"/>
+          
+          <!-- AGC -->
+          <rect x="505" y="100" width="120" height="60" rx="8" fill="#242836" stroke="#a78bfa" stroke-width="2"/>
+          <text x="565" y="125" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="500">AGC</text>
+          <text x="565" y="140" text-anchor="middle" fill="#8b90a0" font-size="8">Auto Gain</text>
+          
+          <!-- Arrow -->
+          <path d="M625 130 L665 130" stroke="#4ade80" stroke-width="2" marker-end="url(#arr2)"/>
+          
+          <!-- Output -->
+          <rect x="670" y="100" width="80" height="60" rx="8" fill="#242836" stroke="#4ade80" stroke-width="2"/>
+          <text x="710" y="125" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Clean</text>
+          <text x="710" y="140" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="500">Audio</text>
+          
+          <!-- Descriptions below -->
+          <rect x="150" y="190" width="170" height="70" rx="6" fill="#1a1d27"/>
+          <text x="235" y="215" text-anchor="middle" fill="#6c9cfc" font-size="10" font-weight="500">AEC</text>
+          <text x="235" y="235" text-anchor="middle" fill="#8b90a0" font-size="9">Removes speaker audio</text>
+          <text x="235" y="250" text-anchor="middle" fill="#8b90a0" font-size="9">from mic input</text>
+          
+          <rect x="340" y="190" width="170" height="70" rx="6" fill="#1a1d27"/>
+          <text x="425" y="215" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="500">NS</text>
+          <text x="425" y="235" text-anchor="middle" fill="#8b90a0" font-size="9">Removes background</text>
+          <text x="425" y="250" text-anchor="middle" fill="#8b90a0" font-size="9">noise (fan, AC, etc.)</text>
+          
+          <rect x="530" y="190" width="170" height="70" rx="6" fill="#1a1d27"/>
+          <text x="615" y="215" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="500">AGC</text>
+          <text x="615" y="235" text-anchor="middle" fill="#8b90a0" font-size="9">Normalizes volume</text>
+          <text x="615" y="250" text-anchor="middle" fill="#8b90a0" font-size="9">(loud/quiet speakers)</text>
+          
+          <defs>
+            <marker id="arr2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4ade80"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">Audio passes through each processing stage in order</p>
+      </div>
+
+      <div class="component-grid">
+        <div class="processing-card">
+          <h4>AEC (Acoustic Echo Cancellation)</h4>
+          <p>When you hear someone through speakers, your mic picks it up. AEC removes that echo so the other person doesn't hear themselves.</p>
+        </div>
+        <div class="processing-card">
+          <h4>NS (Noise Suppression)</h4>
+          <p>Removes constant background noise like fans, air conditioning, keyboard typing. Makes voice clearer.</p>
+        </div>
+        <div class="processing-card">
+          <h4>AGC (Automatic Gain Control)</h4>
+          <p>Normalizes volume. If someone speaks quietly, it boosts. If too loud, it reduces. Consistent output level.</p>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Encoder -->
+      <!-- ============================================ -->
+      <h2>Encoder (Opus)</h2>
+
+      <div class="diagram">
+        <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">Encoder: PCM → Opus</text>
+          
+          <!-- PCM Input -->
+          <rect x="100" y="70" width="200" height="100" rx="8" fill="#242836" stroke="#4ade80" stroke-width="2"/>
+          <text x="200" y="100" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="500">PCM (Raw)</text>
+          <text x="200" y="125" text-anchor="middle" fill="#8b90a0" font-size="10">~768 kbps</text>
+          <text x="200" y="145" text-anchor="middle" fill="#8b90a0" font-size="9">48kHz, 16-bit, stereo</text>
+          
+          <!-- Arrow -->
+          <path d="M300 120 L500 120" stroke="#fbbf24" stroke-width="3" marker-end="url(#arr3)"/>
+          <text x="400" y="105" text-anchor="middle" fill="#fbbf24" font-size="10">Compress</text>
+          
+          <!-- Opus Output -->
+          <rect x="500" y="70" width="200" height="100" rx="8" fill="#242836" stroke="#fbbf24" stroke-width="2"/>
+          <text x="600" y="100" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="500">Opus (Compressed)</text>
+          <text x="600" y="125" text-anchor="middle" fill="#8b90a0" font-size="10">~32 kbps</text>
+          <text x="600" y="145" text-anchor="middle" fill="#8b90a0" font-size="9">20ms frames</text>
+          
+          <!-- Compression ratio -->
+          <rect x="300" y="150" width="200" height="30" rx="6" fill="#1a1d27"/>
+          <text x="400" y="170" text-anchor="middle" fill="#4ade80" font-size="11">24x smaller!</text>
+          
+          <defs>
+            <marker id="arr3" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">Opus codec dramatically reduces bandwidth while maintaining quality</p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>PCM (Before)</th>
+            <th>Opus (After)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bitrate</td>
+            <td>~768 kbps</td>
+            <td>~32 kbps</td>
+          </tr>
+          <tr>
+            <td>Frame size</td>
+            <td>Continuous</td>
+            <td>20ms frames</td>
+          </tr>
+          <tr>
+            <td>Network ready</td>
+            <td>No (too large)</td>
+            <td>Yes</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ============================================ -->
+      <!-- SECTION: Key Points -->
+      <!-- ============================================ -->
+      <h2>Key Points</h2>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#9888;</span>
+        <p><strong>Audio Processing happens BEFORE encoding</strong> &mdash; clean audio compresses better and sounds better.</p>
+      </div>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#9888;</span>
+        <p><strong>Pacer prevents network congestion</strong> &mdash; sends packets at steady intervals instead of bursts.</p>
+      </div>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#9888;</span>
+        <p><strong>Opus is the default codec</strong> &mdash; excellent quality at low bitrates, adapts to network conditions.</p>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SECTION: RTCP -->
+      <!-- ============================================ -->
+      <h2>RTCP (Feedback Channel)</h2>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#128161;</span>
+        <p><strong>RTCP = Real-time Transport Control Protocol</strong> &mdash; provides feedback about the quality of the RTP media stream.</p>
+      </div>
+
+      <div class="diagram">
+        <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+          <text x="400" y="25" text-anchor="middle" fill="#e1e4ed" font-size="14" font-weight="600">RTP/RTCP: Media + Feedback</text>
+          
+          <!-- Sender -->
+          <rect x="50" y="80" width="150" height="100" rx="8" fill="#242836" stroke="#4ade80" stroke-width="2"/>
+          <text x="125" y="115" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="500">Sender</text>
+          <text x="125" y="140" text-anchor="middle" fill="#8b90a0" font-size="9">Sends audio</text>
+          <text x="125" y="160" text-anchor="middle" fill="#8b90a0" font-size="9">via RTP packets</text>
+          
+          <!-- Receiver -->
+          <rect x="600" y="80" width="150" height="100" rx="8" fill="#242836" stroke="#6c9cfc" stroke-width="2"/>
+          <text x="675" y="115" text-anchor="middle" fill="#6c9cfc" font-size="12" font-weight="500">Receiver</text>
+          <text x="675" y="140" text-anchor="middle" fill="#8b90a0" font-size="9">Receives audio</text>
+          <text x="675" y="160" text-anchor="middle" fill="#8b90a0" font-size="9">& sends feedback</text>
+          
+          <!-- RTP Arrow (top) -->
+          <path d="M200 110 L600 110" stroke="#4ade80" stroke-width="3" marker-end="url(#arr4)"/>
+          <rect x="320" y="90" width="160" height="30" rx="6" fill="#1a1d27"/>
+          <text x="400" y="110" text-anchor="middle" fill="#4ade80" font-size="11">RTP (Audio Data)</text>
+          
+          <!-- RTCP Arrow (bottom) -->
+          <path d="M600 150 L200 150" stroke="#fbbf24" stroke-width="3" marker-end="url(#arr5)"/>
+          <rect x="320" y="135" width="160" height="30" rx="6" fill="#1a1d27"/>
+          <text x="400" y="155" text-anchor="middle" fill="#fbbf24" font-size="11">RTCP (Feedback)</text>
+          
+          <!-- RTCP Report Types -->
+          <rect x="150" y="210" width="500" height="70" rx="8" fill="#1a1d27" stroke="#fbbf24" stroke-width="1"/>
+          <text x="400" y="235" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="500">RTCP Reports Include:</text>
+          <text x="400" y="260" text-anchor="middle" fill="#8b90a0" font-size="10">Packet Loss • Jitter • Round-Trip Time • Receiver Reports (RR) • Sender Reports (SR)</text>
+          
+          <defs>
+            <marker id="arr4" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4ade80"/>
+            </marker>
+            <marker id="arr5" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+            </marker>
+          </defs>
+        </svg>
+        <p class="diagram-caption">RTCP provides a feedback channel alongside the RTP media stream</p>
+      </div>
+
+      <h3>RTCP Packet Types</h3>
+
+      <div class="component-grid">
+        <div class="component-card">
+          <h4>SR (Sender Report)</h4>
+          <p>Sent by the sender. Contains timestamp info and statistics about packets/bytes sent. Used for synchronization.</p>
+        </div>
+        <div class="component-card">
+          <h4>RR (Receiver Report)</h4>
+          <p>Sent by the receiver. Reports packet loss, jitter, and delay. Helps sender adjust quality.</p>
+        </div>
+        <div class="component-card">
+          <h4>SDES (Source Description)</h4>
+          <p>Carries metadata like CNAME (canonical name) to identify the source across multiple streams.</p>
+        </div>
+        <div class="component-card">
+          <h4>BYE</h4>
+          <p>Indicates a participant is leaving the session. Allows graceful cleanup of resources.</p>
+        </div>
+      </div>
+
+      <h3>Extended RTCP Feedback (WebRTC)</h3>
+
+      <div class="component-grid">
+        <div class="processing-card">
+          <h4>NACK (Negative Acknowledgment)</h4>
+          <p>Requests retransmission of lost packets. Receiver tells sender which specific packets were lost.</p>
+        </div>
+        <div class="processing-card">
+          <h4>PLI (Picture Loss Indication)</h4>
+          <p>Video-specific. Requests a new keyframe when decoder loses sync. Used after packet loss.</p>
+        </div>
+        <div class="processing-card">
+          <h4>REMB (Receiver Estimated Max Bitrate)</h4>
+          <p>Receiver tells sender the estimated available bandwidth. Helps with congestion control.</p>
+        </div>
+        <div class="processing-card">
+          <h4>Transport-CC</h4>
+          <p>Transport-wide congestion control. Provides detailed per-packet arrival feedback for better bandwidth estimation.</p>
+        </div>
+      </div>
+
+      <h3>Why RTCP Matters</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>What It Measures</th>
+            <th>How Sender Responds</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Packet Loss</td>
+            <td>% of packets that didn't arrive</td>
+            <td>Enable FEC, reduce bitrate, retransmit</td>
+          </tr>
+          <tr>
+            <td>Jitter</td>
+            <td>Variation in packet arrival times</td>
+            <td>Adjust jitter buffer, smooth sending</td>
+          </tr>
+          <tr>
+            <td>RTT (Round-Trip Time)</td>
+            <td>Time for packet to go and return</td>
+            <td>Adjust pacing, timeout values</td>
+          </tr>
+          <tr>
+            <td>Available Bandwidth</td>
+            <td>Network capacity estimate</td>
+            <td>Increase/decrease bitrate accordingly</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="key-point">
+        <span class="key-point-icon">&#9888;</span>
+        <p><strong>RTCP enables adaptive streaming</strong> &mdash; without feedback, the sender would be "blind" to network conditions and couldn't adjust quality.</p>
+      </div>
+
+    </article>
+
+    <footer class="doc-footer">
+      <a href="../index.html">&larr; Back to all docs</a>
+    </footer>
+  </div>
+
+</body>
+</html>
